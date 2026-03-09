@@ -1,0 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+body { margin: 0; background: #0D0618; color: #ffffff; }
+::selection { background: rgba(139,92,246,0.28); }
+
+.page-loader {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 100vh; background: #0D0618;
+}
+.loader-ring {
+  display: block; width: 32px; height: 32px; border-radius: 50%;
+  border: 2px solid rgba(168,85,247,0.2); border-top-color: #9B5CFF;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
