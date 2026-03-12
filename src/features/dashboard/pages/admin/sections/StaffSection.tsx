@@ -202,7 +202,7 @@ const StaffSection: React.FC<Props> = ({ staff, loading, onRefresh, api, onToast
         </div>
         <div className="adm-hdr-actions">
           <button className="btn btn--outline btn--sm" onClick={onRefresh} disabled={loading}>
-            <RefreshIcon /> Refresh
+            <RefreshIcon style={{ width: "24px", height: "24px" }} /> Refresh
           </button>
           <button className="btn btn--primary" onClick={openCreate}>
             <PlusIcon /> Add Staff

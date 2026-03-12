@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../../../hooks/useAppDispatch';
 import { submitTicket } from '../../slices/ticketSlice';
 import store from '../../../../app/store';
+import { BackIcon } from '@/components/icons';
 
 const BASE = import.meta.env.VITE_API_TICKET_URL ?? '';
 
@@ -112,6 +113,7 @@ export default function NewTicket() {
     if (e.target.files) setFiles(Array.from(e.target.files));
   };
 
+
   const handleSubmit = async () => {
     const errs = validate(form);
     if (Object.keys(errs).length) { setErrors(errs); return; }
@@ -152,10 +154,19 @@ export default function NewTicket() {
 
   return (
     <>
-      <div className="dash-page-hdr">
-        <h1 className="dash-page-title">Submit a Ticket</h1>
-        <p className="dash-page-sub">Describe your issue and we'll assign an agent right away.</p>
-      </div>
+ <div >
+    <button
+    className="btn btn--outline btn--sm"
+    style={{ marginBottom: 12 }}
+    onClick={() => navigate(-1)}
+  >
+    <BackIcon /> Back
+  </button>
+    <h1 className="dash-page-title">Submit a Ticket</h1>
+    <p className="dash-page-sub">
+      Describe your issue and we'll assign an agent right away.
+    </p>
+  </div>
 
       <div style={{ maxWidth: 620, background: 'white', border: '1px solid var(--slate-200)', borderRadius: 12, padding: 28 }}>
         {submitError && (
@@ -224,10 +235,10 @@ export default function NewTicket() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <label style={labelStyle}>Priority</label>
             <select style={inputStyle} value={form.priority} onChange={set('priority')}>
-              <option value="p1">P1 — Critical</option>
-              <option value="p2">P2 — High</option>
-              <option value="p3">P3 — Medium</option>
-              <option value="p4">P4 — Low</option>
+              <option value="p1">Critical</option>
+              <option value="p2">High</option>
+              <option value="p3">Medium</option>
+              <option value="p4">Low</option>
             </select>
           </div>
 

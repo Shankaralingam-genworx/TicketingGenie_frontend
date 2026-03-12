@@ -161,7 +161,7 @@ function AgentCard({ agent, navigate, onExpand, expanded }: {
                     </td>
                     <td><PriorityBadge priority={t.priority} /></td>
                     <td><StatusBadge status={t.status} /></td>
-                    <td><SlaCountdown due={t.resolution_due_at} /></td>
+                    <td><SlaCountdown due={t.resolution_due_at} status={t.status} /></td>
                     <td>
                       <button className="btn btn--outline btn--sm"
                         onClick={() => navigate(`/lead/tickets/${t.id}`)}>

@@ -1,87 +1,24 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './LandingPage.css';
 
-/* ─── Data ────────────────────── */
-const features = [
-  {
-    num: '01',
-    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z" /></svg>,
-    title: 'Smart Ticket Creation',
-    desc: 'Submit via web portal or email. Rule-based AI auto-assigns severity — Critical, High, Medium, or Low — with zero manual triage.',
-  },
-  {
-    num: '02',
-    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z" /></svg>,
-    title: 'LangGraph AI Pipeline',
-    desc: 'Email-triggered LangGraph workflow: parse → classify → deduplicate → persist → notify. Fully automated, fully observable.',
-  },
-  {
-    num: '03',
-    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3" /></svg>,
-    title: 'SLA Enforcement',
-    desc: 'Per-severity SLA thresholds configured exclusively by Admin. Automatic breach detection escalates to Team Lead instantly.',
-  },
-  {
-    num: '04',
-    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" /></svg>,
-    title: 'Lifecycle Tracking',
-    desc: 'Full state-machine: New → Acknowledged → Open → In Progress → Resolved → Closed. Enforced transitions with no shortcuts.',
-  },
-  {
-    num: '05',
-    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" /></svg>,
-    title: 'Role-Based Access',
-    desc: 'Four distinct portals — Customer, Agent, Team Lead, Admin — scoped precisely and secured with JWT, no permission bleed.',
-  },
-  {
-    num: '06',
-    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" /></svg>,
-    title: 'Admin Analytics',
-    desc: 'SLA compliance metrics, agent performance, ticket velocity — all on a real-time dashboard backed by immutable audit logs.',
-  },
-];
-
 const steps = [
-  { n: '1', t: 'Ticket Submitted', d: 'Customer creates a ticket via web portal or sends an inbound email to the monitored inbox.' },
-  { n: '2', t: 'AI Classification', d: 'LangGraph pipeline: parse input → detect severity → map priority → check for duplicates.' },
-  { n: '3', t: 'Auto-Assignment', d: 'System selects the best available agent based on priority level and current workload.' },
-  { n: '4', t: 'SLA Monitoring', d: 'Engine tracks first response and resolution times against per-severity configured thresholds.' },
-  { n: '5', t: 'Resolved & Closed', d: 'Agent resolves; customer notified via email. All actions logged in the immutable audit trail.' },
+  { n: '01', t: 'Submit', d: 'Via web portal or inbound email.' },
+  { n: '02', t: 'Classify', d: 'Auto-assigned severity & priority.' },
+  { n: '03', t: 'Assign', d: 'Routed to the right agent instantly.' },
+  { n: '04', t: 'Resolve', d: 'SLA tracked. Customer notified.' },
 ];
 
-const stats = [
-  { value: '99.9%', label: 'SLA Uptime' },
-  { value: '<2 min', label: 'Avg. Assignment' },
-  { value: '4 Roles', label: 'Access Tiers' },
-  { value: '8 States', label: 'Lifecycle Steps' },
-];
 
-/* ─── Main Component ─────────────── */
+
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
-  const [visible, setVisible] = useState<Set<number>>(new Set());
-  const refs = useRef<(HTMLDivElement | null)[]>([]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 48);
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
-  }, []);
-
-  useEffect(() => {
-    const io = new IntersectionObserver(
-      (entries) => entries.forEach((e) => {
-        if (e.isIntersecting) {
-          const i = Number(e.target.getAttribute('data-i'));
-          setVisible((p) => new Set([...p, i]));
-        }
-      }),
-      { threshold: 0.12 }
-    );
-    refs.current.forEach((el) => el && io.observe(el));
-    return () => io.disconnect();
   }, []);
 
   return (
@@ -94,8 +31,6 @@ const LandingPage: React.FC = () => {
             <LogoIcon />
             Ticketing<em>Genie</em>
           </a>
-          <ul className="lp-nav-links">
-          </ul>
           <button className="lp-nav-btn" onClick={() => navigate('/login')}>
             Sign In <Arrow />
           </button>
@@ -107,30 +42,25 @@ const LandingPage: React.FC = () => {
         <div className="lp-hero-bg" aria-hidden="true">
           <div className="hbg-circle hbg-c1" />
           <div className="hbg-circle hbg-c2" />
-          <div className="hbg-ring hbg-r1" />
-          <div className="hbg-ring hbg-r2" />
           <div className="hbg-dots" />
         </div>
 
         <div className="lp-hero-content">
           <div className="lp-hero-pill">
             <span className="hero-pill-dot" />
-            AI-Powered Support Operations
+            AI-Powered Support
           </div>
           <h1 className="lp-hero-h1">
             Resolve every ticket.<br />
             <em>Miss nothing.</em>
           </h1>
           <p className="lp-hero-p">
-            Ticketing Genie centralises your support operations — from AI-classified
-            email tickets to SLA-enforced escalations — giving your team complete
-            visibility and control over every issue.
+            AI-classified tickets, SLA enforcement, and full lifecycle
+            tracking — giving your team clarity on every issue.
           </p>
-          <div className="lp-hero-btns">
-            <button className="btn-primary" onClick={() => navigate('/login')}>
-              Go to your portal <Arrow />
-            </button>
-          </div>
+          <button className="btn-primary" onClick={() => navigate('/login')}>
+            Go to your portal <Arrow />
+          </button>
         </div>
 
         <div className="lp-hero-card-wrap">
@@ -138,15 +68,16 @@ const LandingPage: React.FC = () => {
         </div>
       </section>
 
+      {/* STATS */}
+      <section className="lp-stats">
+
+      </section>
+
       {/* WORKFLOW */}
-      <section className="lp-workflow" id="workflow">
+      <section className="lp-workflow">
         <div className="lp-workflow-inner">
-          <div className="lp-section-hdr lp-section-hdr--left">
-            <span className="section-tag">Workflow</span>
-            <h2 className="section-h2">
-              From submission<br /><em>to resolution</em>
-            </h2>
-          </div>
+          <span className="section-tag">How it works</span>
+          <h2 className="section-h2">From submission <em>to resolution</em></h2>
           <div className="wf-steps">
             {steps.map((s, i) => (
               <div className="wf-step" key={s.n}>
@@ -165,14 +96,8 @@ const LandingPage: React.FC = () => {
       {/* CTA */}
       <section className="lp-cta">
         <div className="lp-cta-inner">
-          <span className="section-tag section-tag--light">Ready?</span>
-          <h2 className="lp-cta-h2">
-            Your team deserves<br /><em>smarter support tools.</em>
-          </h2>
-          <p className="lp-cta-p">
-            Sign in to your portal and start managing tickets with clarity,
-            speed, and full accountability.
-          </p>
+          <h2 className="lp-cta-h2">Ready to get started?</h2>
+          <p className="lp-cta-p">Sign in to your portal and manage tickets with speed and clarity.</p>
           <button className="btn-cta" onClick={() => navigate('/login')}>
             Sign in to Ticketing Genie
           </button>
@@ -186,7 +111,6 @@ const LandingPage: React.FC = () => {
             <LogoIcon size={24} />
             Ticketing<em>Genie</em>
           </a>
-          <p>AI-powered support ticket management. Built for teams that care.</p>
           <div className="lp-footer-badges">
             {['JWT Secured', 'SLA Enforced', 'Audit Ready'].map((b) => (
               <span key={b} className="footer-badge">{b}</span>
@@ -198,7 +122,7 @@ const LandingPage: React.FC = () => {
   );
 };
 
-/* ─── Shared micro-components ──── */
+/* ─── Micro-components ─── */
 const LogoIcon: React.FC<{ size?: number }> = ({ size = 32 }) => (
   <svg width={size} height={size} viewBox="0 0 40 40" fill="none" style={{ flexShrink: 0 }}>
     <rect width="40" height="40" rx="10" fill="url(#lg)" />
@@ -221,9 +145,7 @@ const Arrow: React.FC = () => (
 const TicketCard: React.FC = () => (
   <div className="tc">
     <div className="tc-header">
-      <div className="tc-dots">
-        <span /><span /><span />
-      </div>
+      <div className="tc-dots"><span /><span /><span /></div>
       <span className="tc-id">TG-3142</span>
       <span className="tc-crit">Critical</span>
     </div>

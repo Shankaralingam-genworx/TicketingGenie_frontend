@@ -187,12 +187,14 @@ const IssuesSection: React.FC<Props> = ({
         </div>
         <div className="adm-hdr-actions">
           <button
-            className="btn btn--outline btn--sm"
-            onClick={onRefresh}
-            disabled={loading}
-          >
-            <RefreshIcon /> Refresh
-          </button>
+  className="btn btn--outline btn--sm"
+  onClick={onRefresh}
+  disabled={loading}
+  style={{ display: "flex", alignItems: "center", gap: "6px" }}
+>
+  <RefreshIcon style={{ width: "24px", height: "24px" }} />
+  Refresh
+</button>
           <button className="btn btn--primary" onClick={openCreate}>
             <PlusIcon /> New issue
           </button>

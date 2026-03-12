@@ -1,11 +1,11 @@
 import { configureStore } from '@reduxjs/toolkit';
 import rootReducer from './rootReducer';
-import { loggerMiddleware, authMiddleware } from './middleware';
+import { loggerMiddleware } from './middleware';
 
 const store = configureStore({
   reducer: rootReducer,
   middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware().concat(loggerMiddleware, authMiddleware),
+    getDefaultMiddleware().concat(loggerMiddleware),
   devTools: import.meta.env.DEV,
 });
 

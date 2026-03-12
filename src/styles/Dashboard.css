@@ -146,29 +146,57 @@ body { font-family: var(--font); background: var(--slate-50); color: var(--slate
   padding: 32px 36px;
   background: var(--slate-50);
 }
-.dash-page-hdr { margin-bottom: 28px; }
-.dash-page-title { font-size: 1.4rem; font-weight: 800; color: var(--slate-900); margin-bottom: 4px; letter-spacing: -0.02em; }
-.dash-page-sub { font-size: 0.875rem; color: var(--slate-400); font-weight: 400; }
+.dash-page-hdr {
+  margin-bottom: 28px;
+}
+
+.dash-page-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+.dash-page-title {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--slate-900);
+  letter-spacing: -0.02em;
+  margin-bottom: 2px;
+}
+.dash-title-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.dash-page-sub {
+  font-size: 0.875rem;
+  color: var(--slate-400);
+}
 
 /* ─── STAT CARDS ───────────────────────────────────────────────────── */
 .dash-stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 16px;
-  margin-bottom: 28px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
 }
 .stat-card {
-  background: var(--white); border: 1px solid var(--slate-200);
-  border-radius: 12px; padding: 20px 22px;
+  padding: 12px;
+  border-radius: 10px;
+  background: white;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  text-align: center;
 }
 .stat-card-label { font-size: 0.75rem; font-weight: 600; color: var(--slate-400); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 8px; }
-.stat-card-value { font-size: 1.9rem; font-weight: 800; color: var(--slate-900); letter-spacing: -0.03em; margin-bottom: 4px; line-height: 1; }
+.stat-card-value { font-size: 1.4rem; font-weight: 600; color: var(--slate-900); letter-spacing: -0.03em; margin-bottom: 4px; line-height: 1; }
 .stat-card-delta { font-size: 0.75rem; font-weight: 500; color: var(--green-500); }
 .stat-card-delta--down { color: var(--red-500); }
 .stat-card-icon {
-  float: right; margin-top: -2px;
-  width: 36px; height: 36px; border-radius: 9px;
-  display: grid; place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 6px;
 }
 .stat-card-icon svg { width: 18px; height: 18px; }
 
@@ -212,6 +240,12 @@ tbody td { padding: 13px 22px; font-size: 0.85rem; color: var(--slate-700); vert
 .badge--closed       { background: var(--slate-100); color: var(--slate-500); border: 1px solid var(--slate-200); }
 .badge--dot::before {
   content: ''; width: 5px; height: 5px; border-radius: 50%; background: currentColor;
+}
+
+/* ─── PAGE ACTIONS ─────────────────────────────────────────────────── */
+.dash-actions {
+  display: flex;
+  gap: 8px;
 }
 
 /* ─── BUTTONS ──────────────────────────────────────────────────────── */

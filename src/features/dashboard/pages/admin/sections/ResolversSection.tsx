@@ -54,7 +54,7 @@ const ResolversSection: React.FC<Props> = ({
     const fetchTeams = async () => {
       setTeamsLoading(true);
       try {
-        const data = await api.get('/admin/teams_dropdown', 'auth');
+       const data = await api.get<TeamOption[]>('/admin/teams_dropdown', 'auth');
         setTeams(data);
       } catch (e: any) {
         onToast(`Failed to load teams: ${e.message}`, false);
@@ -112,7 +112,7 @@ const ResolversSection: React.FC<Props> = ({
     <>
       <div className="adm-section-hdr">
         <div>
-          <h1 className="dash-page-title">Issue → Team Resolvers</h1>
+          <h1 className="dash-page-title">Skill Mapping</h1>
           <p className="dash-page-sub">
             Assign teams as primary resolvers for each issue type.
           </p>
@@ -123,7 +123,7 @@ const ResolversSection: React.FC<Props> = ({
             onClick={onRefresh}
             disabled={loading}
           >
-            <RefreshIcon /> Refresh
+            <RefreshIcon style={{ width: "24px", height: "24px" }} /> Refresh
           </button>
           <button
             className="btn btn--primary"

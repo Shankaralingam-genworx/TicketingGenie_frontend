@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../../hooks/useAppDispatch';
 import { loginThunk, clearError } from '../slices/authSlice';
 import './LoginForm.css';
-import env from '../../../config/env';  
+import env from '@/config/env';  
 
 /* ─────────────────────────────────────────────────────────────────
    Register Modal
@@ -46,7 +46,7 @@ const [form, setForm] = useState({
     setError('');
 
     try {
-      const res = await fetch(`${env.API_BASE_URL}/auth/register`, {
+      const res = await fetch(`${env.API_AUTH_URL}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
