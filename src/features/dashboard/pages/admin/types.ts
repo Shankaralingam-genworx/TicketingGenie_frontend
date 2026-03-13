@@ -24,6 +24,8 @@ export interface SLA {
   customer_tier: 'smb' | 'enterprise';
   response_time_mins: number;
   resolution_time_mins: number;
+  additional_response_mins: number;
+  additional_resolution_mins: number;
   is_active: boolean;
 }
 

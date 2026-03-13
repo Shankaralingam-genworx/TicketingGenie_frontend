@@ -1,9 +1,14 @@
+/**
+ * CustomerDashboard — Customer shell layout.
+ * File: src/features/dashboard/pages/CustomerDashboard.tsx
+ */
+
 import React from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../../hooks/useAppDispatch';
-import { logout } from '../../auth';
-import '../../../styles/Dashboard.css';
 import { logoutThunk } from '../../auth/slices/authSlice';
+import NotificationBell from '../../notifications/components/NotificationBell';
+import '../../../styles/Dashboard.css';
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 
@@ -17,39 +22,58 @@ const LogoutIcon = () => <svg style={{ width: 13, height: 13 }} viewBox="0 0 20 
 
 const NAV = [
   { label: 'My Tickets', icon: <TicketIcon />, to: 'tickets'    },
-  { label: 'New Ticket', icon: <PlusIcon />,   to: 'new-ticket' },
-  { label: 'Profile',    icon: <UserIcon />,   to: 'profile'    },
 ];
+
+const ACCENT = '#1D4ED8';
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function CustomerDashboard() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-  const user     = useAppSelector((s) => s.auth.user);
+  const user  = useAppSelector((s) => s.auth.user);
+  const token = useAppSelector((s) => s.auth.token);
 
-  const initials = user?.email ? user.email.slice(0, 2).toUpperCase() : 'CU';
+  const initials     = user?.email ? user.email.slice(0, 2).toUpperCase() : 'CU';
   const handleLogout = async () => {
-  await dispatch(logoutThunk());
-  navigate('/login', { replace: true });
-};
+    await dispatch(logoutThunk());
+    navigate('/login', { replace: true });
+  };
 
   return (
     <div className="dash">
-      {/* ── Top bar ─────────────────────────────────────────────────────────── */}
+      {/* ── Top bar ──────────────────────────────────────────────────────── */}
       <header className="dash-topbar">
         <Link className="dash-topbar-logo" to="/"><LogoIcon />Ticketing<em>Genie</em></Link>
         <div className="dash-topbar-divider" />
         <span className="dash-topbar-title">Customer Portal</span>
+
         <div className="dash-topbar-right">
+          {/* Notification bell */}
+          <NotificationBell
+            token={token}
+            accentColor={ACCENT}
+            onNavigate={(_ticketId, ticketNumber) => {
+              if (ticketNumber === '__all_notifications__') {
+                navigate('notifications');
+              } else if (ticketNumber) {
+                navigate('tickets');
+              }
+            }}
+          />
+
           <span className="dash-role-badge dash-role-badge--customer">Customer</span>
-          <span style={{ fontSize: '0.8rem', color: 'var(--slate-400)' }}>{user?.email}</span>
-          <div className="dash-avatar">{initials}</div>
+          <span
+            style={{ fontSize: '0.8rem', color: 'var(--slate-400)', cursor: 'pointer' }}
+            onClick={() => navigate('profile')}
+            title="Go to Profile"
+          >{user?.email}</span>
+          <div className="dash-avatar" onClick={() => navigate('profile')} title="Go to Profile">{initials}</div>
           <button className="dash-logout-btn" onClick={handleLogout}><LogoutIcon /> Sign out</button>
         </div>
       </header>
 
-      {/* ── Sidebar ─────────────────────────────────────────────────────────── */}
+      {/* ── Sidebar ──────────────────────────────────────────────────────── */}
       <aside className="dash-sidebar">
         <span className="dash-nav-label">Support</span>
         {NAV.map((n) => (
@@ -63,7 +87,7 @@ export default function CustomerDashboard() {
         ))}
       </aside>
 
-      {/* ── Main (child routes render here) ─────────────────────────────────── */}
+      {/* ── Main ─────────────────────────────────────────────────────────── */}
       <main className="dash-main">
         <Outlet />
       </main>
