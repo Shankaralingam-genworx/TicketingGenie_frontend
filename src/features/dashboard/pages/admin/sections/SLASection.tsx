@@ -284,7 +284,7 @@ const SLASection: React.FC<Props> = ({
 
   const handleDelete = async (s: SLA) => {
     try {
-      await api.del(`/sla/${s.id}`);
+      await api.delete(`/sla/${s.id}`);
       onToast("SLA deleted");
       onRefresh();
     } catch (e: any) {

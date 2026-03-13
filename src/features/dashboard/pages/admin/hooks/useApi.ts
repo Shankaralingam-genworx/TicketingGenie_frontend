@@ -7,6 +7,15 @@
 import { useMemo } from 'react';
 import { authApi, ticketApi } from '@/lib/fetchClient';
 
+export type ApiClient = {
+  get: <T = unknown>(path: string, service?: 'auth' | 'ticket') => Promise<T>;
+  post: <T = unknown>(path: string, body?: unknown, service?: 'auth' | 'ticket') => Promise<T>;
+  put: <T = unknown>(path: string, body?: unknown, service?: 'auth' | 'ticket') => Promise<T>;
+  patch: <T = unknown>(path: string, body?: unknown, service?: 'auth' | 'ticket') => Promise<T>;
+  delete: <T = unknown>(path: string, service?: 'auth' | 'ticket') => Promise<T>;
+};
+
+
 export function useApi(_token: string | null) {
   return useMemo(
     () => ({

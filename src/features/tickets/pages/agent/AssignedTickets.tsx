@@ -199,7 +199,7 @@ export default function AssignedTickets() {
         </div>
         <button className="btn btn--outline btn--sm"
           onClick={() => load(filters)} disabled={loading}>
-          <RefreshIcon /> Refresh
+              <RefreshIcon style={{ width: 24, height: 24 }} /> Refresh
         </button>
       </div>
 

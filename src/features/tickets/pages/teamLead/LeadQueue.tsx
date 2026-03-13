@@ -23,14 +23,9 @@ import { PriorityBadge, EscalatedBadge, SlaBreachBadge } from '../../components/
 import FilterBar    from './FilterBar';
 import SlaCountdown from '../../../tickets/components/SlaCountdown';
 import Pagination   from './Pagination';
+import { RefreshIcon } from '@/components/icons';
 
-const RefreshIcon = () => (
-  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7"
-    style={{ width: 14, height: 14 }}>
-    <path strokeLinecap="round" strokeLinejoin="round"
-      d="M4 4a8 8 0 0112 0M16 16a8 8 0 01-12 0M4 16v-4h4M16 4v4h-4"/>
-  </svg>
-);
+
 
 const SEV_COLOR: Record<string, string> = {
   critical: '#DC2626', high: '#D97706', medium: '#2563EB', low: '#64748B',
@@ -318,7 +313,7 @@ export default function LeadQueue() {
         </div>
         <button className="btn btn--outline btn--sm"
           onClick={() => load(filters)} disabled={loading}>
-          <RefreshIcon /> Refresh
+         <RefreshIcon style={{ width: "24px", height: "24px" }} /> Refresh
         </button>
       </div>
 

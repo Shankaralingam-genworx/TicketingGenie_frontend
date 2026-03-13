@@ -227,13 +227,14 @@ export default function LeadTicketDetail() {
           onClose={() => setShowReassign(false)} />
       )}
 
-       <button
+            <div> 
+               <button
                 className="btn btn--outline btn--sm"
                 style={{ marginBottom: 12 }}
                 onClick={() => navigate(-1)}
               >
                 <BackIcon /> Back
-              </button>
+              </button></div> 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10,
         flexWrap: 'wrap', marginBottom: 4 }}>

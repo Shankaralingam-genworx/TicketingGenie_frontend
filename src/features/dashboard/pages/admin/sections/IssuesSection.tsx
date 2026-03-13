@@ -163,7 +163,7 @@ const IssuesSection: React.FC<Props> = ({
 
   const handleDelete = async (issue: Issue) => {
     try {
-      await api.del(`/issues/${issue.id}`);
+      await api.delete(`/issues/${issue.id}`);
       onToast("Issue deleted");
       onRefresh();
     } catch (e: any) {

@@ -275,7 +275,7 @@ const EmailConfigSection: React.FC<Props> = ({ api, onToast }) => {
 
   const handleDelete = async (c: EmailConfig) => {
     try {
-      await api.del(`/admin/email-config/${c.id}`, "auth");
+      await api.delete(`/admin/email-config/${c.id}`, "auth");
       onToast("Email config deleted");
       load();
     } catch (e: any) {

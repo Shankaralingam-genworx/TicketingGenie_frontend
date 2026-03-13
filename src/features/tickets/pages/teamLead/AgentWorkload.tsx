@@ -16,14 +16,7 @@ import { TicketStatus } from '../../types/ticket.types';
 import { StatusBadge, PriorityBadge } from '../../components/TicketBadges';
 import FilterBar    from './FilterBar';
 import SlaCountdown from '../../../tickets/components/SlaCountdown';
-
-const RefreshIcon = () => (
-  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7"
-    style={{ width: 14, height: 14 }}>
-    <path strokeLinecap="round" strokeLinejoin="round"
-      d="M4 4a8 8 0 0112 0M16 16a8 8 0 01-12 0M4 16v-4h4M16 4v4h-4"/>
-  </svg>
-);
+import { RefreshIcon } from '@/components/icons';
 
 // Status colours for the breakdown chips
 const STATUS_CHIP: Record<string, { bg: string; color: string }> = {
@@ -233,7 +226,7 @@ export default function AgentWorkload() {
         </div>
         <button className="btn btn--outline btn--sm"
           onClick={() => load(filters, expanded.size > 0)} disabled={loading}>
-          <RefreshIcon /> Refresh
+          <RefreshIcon style={{ width: "24px", height: "24px" }} /> Refresh
         </button>
       </div>
 

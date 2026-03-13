@@ -12,6 +12,7 @@
  * All API files just do: `${env.API_AUTH_URL}/auth/login` — no extra /api/v1 needed.
  */
 
+
 const env = {
   API_AUTH_URL:   import.meta.env.VITE_API_AUTH_URL   ?? "http://localhost:8001/api/v1",
   API_TICKET_URL: import.meta.env.VITE_API_TICKET_URL ?? "http://localhost:8002/api/v1",

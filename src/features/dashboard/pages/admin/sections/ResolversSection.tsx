@@ -89,7 +89,7 @@ const ResolversSection: React.FC<Props> = ({
 
   const handleDelete = async (r: IssueResolver) => {
     try {
-      await api.del(`/issue-resolvers/${r.id}`);
+      await api.delete(`/issue-resolvers/${r.id}`);
       onToast('Resolver mapping removed');
       onRefresh();
     } catch (e: any) {
