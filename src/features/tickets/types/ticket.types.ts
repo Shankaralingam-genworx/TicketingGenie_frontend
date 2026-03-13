@@ -1,14 +1,15 @@
 export enum TicketStatus {
-  NEW = 'new',
+  NEW          = 'new',
   ACKNOWLEDGED = 'acknowledged',
-  ASSIGNED = 'assigned',
-  OPEN = 'open',
-  IN_PROGRESS = 'in_progress',
-  ON_HOLD = 'on_hold',
-  RESOLVED = 'resolved',
-  CLOSED = 'closed',
-  REOPENED = 'reopened',
+  ASSIGNED     = 'assigned',
+  OPEN         = 'open',
+  IN_PROGRESS  = 'in_progress',
+  ON_HOLD      = 'on_hold',
+  RESOLVED     = 'resolved',
+  CLOSED       = 'closed',
+  REOPENED     = 'reopened',
 }
+
 
 export enum Priority {
   P1 = 'p1',
@@ -53,50 +54,12 @@ export const PRIORITY_LABEL: Record<Priority, string> = {
   [Priority.P4]: 'P4 — Low',
 };
 
-export interface SLAResponse {
-  id: number;
-  name: string;
-  response_time_hrs: number;
-  resolution_time_hrs: number;
-}
-
 export interface IssueResponse {
   id: number;
   name: string;
   category?: string;
 }
 
-export interface TicketResponse {
-  id: number;
-  ticket_number: string;
-  title: string;
-  description: string;
-  customer_id: number;
-  customer_tier: string;
-  issue_id: number | null;
-  issue: IssueResponse | null;
-  customer_priority: string;
-  priority: string;
-  priority_overridden: boolean;
-  priority_override_justification: string | null;
-  severity: string;
-  status: TicketStatus;
-  source: string;
-  team_id: number | null;
-  assigned_agent_id: number | null;
-  sla_id: number | null;
-  sla: SLAResponse | null;
-  response_due_at: string | null;
-  resolution_due_at: string | null;
-  first_response_at: string | null;
-  resolved_at: string | null;
-  closed_at: string | null;
-  is_escalated: boolean;
-  escalated_at: string | null;
-  attachments: unknown[] | null;
-  created_at: string;
-  updated_at: string;
-}
 
 export interface CreateTicketPayload {
   issue_id: number;
@@ -104,4 +67,97 @@ export interface CreateTicketPayload {
   description: string;
   priority: string;
   attachments?: File[];
+}
+
+export interface SLAResponse {
+  id:                         number;
+  name:                       string;
+  customer_tier:              string;
+  severity:                   string;
+  response_time_mins:         number;
+  resolution_time_mins:       number;
+  additional_response_mins:   number;
+  additional_resolution_mins: number;
+  is_active:                  boolean;
+  created_at:                 string;
+  updated_at:                 string;
+}
+
+export interface EscalationResponse {
+  id:                        number;
+  ticket_id:                 number;
+  old_agent_id:              number;
+  new_agent_id:              number | null;
+  reason:                    string;
+  notes:                     string | null;
+  escalated_by:              string;
+  escalated_at:              string;
+  reassigned_at:             string | null;
+  escalated_resolution_mins: number | null;
+}
+
+export interface AttachmentMeta {
+  id: number;
+  url: string;
+  stored_name: string;
+  original_name: string;
+  content_type: string;
+  size_bytes: number;
+}
+
+export interface TicketResponse {
+  id:             number;
+  ticket_number:  string;
+  title:          string;
+  description:    string;
+  customer_id:    number;
+  customer_tier:  string;
+  customer_email: string;
+  issue_id:       number | null;
+  issue:          { id: number; name: string } | null;
+
+  customer_priority:               string;
+  priority:                        string;
+  priority_overridden:             boolean;
+  priority_override_justification: string | null;
+
+  severity: string;
+  status:   TicketStatus | string;
+  source:   string;
+
+  team_id:           number | null;
+  assigned_agent_id: number | null;
+
+  sla_id: number | null;
+  sla:    SLAResponse | null;
+
+  // Normal SLA deadlines
+  response_due_at:   string | null;
+  resolution_due_at: string | null;
+
+  // Escalation SLA deadlines
+  escalated_response_due_at:   string | null;
+  escalated_resolution_due_at: string | null;
+
+  // Timestamps
+  work_started_at:   string | null;
+  first_response_at: string | null;
+  resolved_at:       string | null;
+  closed_at:         string | null;
+
+  // Escalation
+  is_escalated: boolean;
+  escalated_at: string | null;
+  escalation:   EscalationResponse | null;
+
+  attachments: AttachmentMeta[] | null;
+
+  // Computed SLA breach flags from backend
+  response_sla_breached:              boolean;
+  resolution_sla_breached:            boolean;
+  escalated_response_sla_breached:    boolean;
+  escalated_resolution_sla_breached:  boolean;
+
+  created_at: string;
+  updated_at: string;
 }

@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useMyTickets } from '../../../../hooks/useTickets';
 import { TicketStatus, STATUS_LABEL, PRIORITY_LABEL } from '../../types/ticket.types';
 import { TicketResponse } from '../../types/ticket.types';
+import SlaCountdown from '../../components/SlaCountdown';
+import { RefreshIcon } from '@/components/icons';
 
 export const STATUS_CLASS: Record<TicketStatus, string> = {
   [TicketStatus.NEW]: 'badge--new',
@@ -28,29 +30,33 @@ function fmtDate(iso: string) {
 }
 
 function StatsBar({ tickets }: { tickets: TicketResponse[] }) {
-  const open     = tickets.filter((t) => [TicketStatus.OPEN, TicketStatus.IN_PROGRESS].includes(t.status)).length;
-  const resolved = tickets.filter((t) => [TicketStatus.RESOLVED, TicketStatus.CLOSED].includes(t.status)).length;
+  const open     = tickets.filter((t) => [TicketStatus.OPEN, TicketStatus.IN_PROGRESS,TicketStatus.ON_HOLD,TicketStatus.REOPENED].includes(t.status as TicketStatus)).length;
+  const resolved = tickets.filter((t) => [TicketStatus.RESOLVED, TicketStatus.CLOSED].includes(t.status as TicketStatus)).length;
+  const closed = tickets.filter((t) => [TicketStatus.CLOSED].includes(t.status as TicketStatus)).length;
   return (
     <div className="dash-stats">
-      {[
-        { label: 'Total Tickets',       value: tickets.length, bg: '#EFF6FF', ic: '#2563EB' },
-        { label: 'Open / In Progress',  value: open,           bg: '#FEF2F2', ic: '#EF4444' },
-        { label: 'Resolved / Closed',   value: resolved,       bg: '#F0FDF4', ic: '#22C55E' },
-      ].map((c) => (
-        <div className="stat-card" key={c.label}>
-          <div className="stat-card-icon" style={{ background: c.bg }}>
-            <span style={{ color: c.ic, fontWeight: 800, fontSize: '1.1rem' }}>{c.value}</span>
-          </div>
-          <div className="stat-card-label">{c.label}</div>
-          <div className="stat-card-value">{c.value}</div>
-        </div>
-      ))}
+  {[
+    { label: 'Total Tickets', value: tickets.length, bg: '#EFF6FF', ic: '#2563EB' },
+    { label: 'Opened', value: open, bg: '#FEF2F2', ic: '#EF4444' },
+    { label: 'Resolved', value: resolved, bg: '#F0FDF4', ic: '#22C55E' },
+    { label: 'Closed', value: closed, bg: '#F3F4F6', ic: '#6B7280' },   
+  ].map((c) => (
+    <div className="stat-card" key={c.label}>
+      <div className="stat-card-icon">
+        <span style={{ color: c.ic, fontWeight: 700, fontSize: '1rem' }}>
+          {c.label}
+        </span>
+      </div>
+
+      {/* <div className="stat-card-label">{c.label}</div> */}
+      <div className="stat-card-value">{c.value}</div>
     </div>
+  ))}
+</div>
   );
 }
 
 const PlusIcon    = () => <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 12, height: 12 }}><path strokeLinecap="round" d="M7 2v10M2 7h10" /></svg>;
-const RefreshIcon = () => <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" style={{ width: 15, height: 15 }}><path strokeLinecap="round" strokeLinejoin="round" d="M4 4a8 8 0 0112 0M16 16a8 8 0 01-12 0M4 16v-4h4M16 4v4h-4" /></svg>;
 
 export default function MyTickets() {
   const navigate = useNavigate();
@@ -58,18 +64,32 @@ export default function MyTickets() {
 
   return (
     <>
-      <div className="dash-page-hdr" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-        <div>
-          <h1 className="dash-page-title">My Support Tickets</h1>
-          <p className="dash-page-sub">Track the status of all your submitted requests.</p>
-        </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn btn--outline" onClick={refresh} disabled={loading}><RefreshIcon /> Refresh</button>
-          <button className="btn btn--primary" onClick={() => navigate('/customer/new-ticket')}> {/* ✅ fixed */}
-            <PlusIcon /> New Ticket
-          </button>
-        </div>
-      </div>
+<div className="dash-page-hdr">
+  <div className="dash-page-row">
+
+    <div className="dash-title-block">
+      <h1 className="dash-page-title">My Support Tickets</h1>
+      <p className="dash-page-sub">
+        Track the status of all your submitted requests.
+      </p>
+    </div>
+
+  
+  </div>
+   <div className="dash-actions">
+      <button className="btn btn--outline" onClick={refresh} disabled={loading}>
+        <RefreshIcon style={{ width: "24px", height: "24px" }} />
+        Refresh
+      </button>
+
+      <button
+        className="btn btn--primary"
+        onClick={() => navigate('/customer/new-ticket')}
+      >
+        <PlusIcon /> New Ticket
+      </button>
+    </div>
+</div>
 
       {!loading && !error && <StatsBar tickets={tickets} />}
 
@@ -81,7 +101,7 @@ export default function MyTickets() {
 
       <div className="dash-table-wrap">
         <div className="dash-table-hdr">
-          <div><h3>Ticket History</h3><p>Your submitted support requests</p></div>
+          <div><h3>Ticket History</h3></div>
         </div>
 
         {loading ? (
@@ -89,14 +109,14 @@ export default function MyTickets() {
         ) : tickets.length === 0 ? (
           <div style={{ padding: '48px 0', textAlign: 'center', color: 'var(--slate-400)' }}>
             <p style={{ fontSize: '1rem', marginBottom: 12 }}>No tickets yet.</p>
-            <button className="btn btn--primary" onClick={() => navigate('/customer/new-ticket')}> {/* ✅ fixed */}
+            <button className="btn btn--primary" onClick={() => navigate('/customer/new-ticket')}> 
               <PlusIcon /> Raise your first ticket
             </button>
           </div>
         ) : (
           <table>
             <thead>
-              <tr><th>Ticket #</th><th>Subject</th><th>Priority</th><th>Status</th><th>Submitted</th><th>Due</th><th /></tr>
+              <tr><th>Ticket #</th><th>Subject</th><th>Priority</th><th>Status</th><th>Submitted</th><th>SLA Remaining</th><th /></tr>
             </thead>
             <tbody>
               {tickets.map((t) => (
@@ -109,16 +129,16 @@ export default function MyTickets() {
                     </span>
                   </td>
                   <td>
-                    <span className={`badge ${STATUS_CLASS[t.status] ?? ''}`}>
-                      {STATUS_LABEL[t.status] ?? t.status}
+                    <span className={`badge ${STATUS_CLASS[t.status as TicketStatus] ?? ''}`}>
+                      {STATUS_LABEL[t.status as TicketStatus] ?? t.status}
                     </span>
                   </td>
                   <td style={{ color: 'var(--slate-400)', fontSize: '0.8rem' }}>{fmtDate(t.created_at)}</td>
-                  <td style={{ color: 'var(--slate-400)', fontSize: '0.8rem' }}>{t.resolution_due_at ? fmtDate(t.resolution_due_at) : '—'}</td>
+                  <td><SlaCountdown due={t.resolution_due_at} status={t.status} /></td>
                   <td>
                     <button
                       className="btn btn--outline btn--sm"
-                      onClick={() => navigate(`/customer/tickets/${t.id}`)} // ✅ fixed
+                      onClick={() => navigate(`/customer/tickets/${t.id}`)} 
                     >
                       View
                     </button>

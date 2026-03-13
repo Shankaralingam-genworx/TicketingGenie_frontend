@@ -1,49 +1,33 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
-import type { AuthState, User } from "../../../types";
+import type { AuthState, User } from "@/types";
 import { authService } from "../services/authService";
 import type { LoginRequest } from "../types";
+import { authApi } from "@/lib/fetchClient";
+import { STORAGE_KEYS } from "@/config/constants";
 
-/* ───────────────────────────────────────────────────────────
-   BOOTSTRAP AUTH (refresh session on page reload)
-─────────────────────────────────────────────────────────── */
+/* ── Bootstrap auth (refresh session on page reload) ──────────── */
 
 export const bootstrapAuth = createAsyncThunk(
   "auth/bootstrap",
   async (_, { rejectWithValue }) => {
     try {
-      const authBase = import.meta.env.VITE_API_AUTH_URL ?? "";
-
-      const res = await fetch(`${authBase}/auth/refresh`, {
-        method: "POST",
-        credentials: "include",
-      });
-
-      
-
-      // If user is not logged in, just return null
-      if (res.status === 401) {
-        return rejectWithValue(null);
+      const data = await authApi.post<{ access_token: string; user: User }>(
+        "/auth/refresh",
+        undefined,
+        { token: null } // no bearer token for refresh (uses httpOnly cookie)
+      );
+      if (data.access_token) {
+        localStorage.setItem(STORAGE_KEYS.TOKEN, data.access_token);
       }
-
-      if (!res.ok) {
-        return rejectWithValue("Refresh failed");
-      }
-
-      const data = await res.json();
-
-      return {
-        access_token: data.access_token,
-        user: data.user,
-      };
+      return { access_token: data.access_token, user: data.user };
     } catch {
+      localStorage.removeItem(STORAGE_KEYS.TOKEN);
       return rejectWithValue(null);
     }
   }
 );
 
-/* ───────────────────────────────────────────────────────────
-   LOGIN
-─────────────────────────────────────────────────────────── */
+/* ── Login ──────────────────────────────────────────────────────── */
 
 export const loginThunk = createAsyncThunk<
   { access_token: string; user: User },
@@ -51,38 +35,30 @@ export const loginThunk = createAsyncThunk<
   { rejectValue: string }
 >("auth/login", async (credentials, { rejectWithValue }) => {
   try {
-    return await authService.login(credentials);
+    const result = await authService.login(credentials);
+    localStorage.setItem(STORAGE_KEYS.TOKEN, result.access_token);
+    return result;
   } catch (err: any) {
-    return rejectWithValue(
-      err?.response?.data?.detail ?? "Invalid credentials. Please try again."
-    );
+    return rejectWithValue(err?.message ?? "Invalid credentials. Please try again.");
   }
 });
 
-/* ───────────────────────────────────────────────────────────
-   LOGOUT
-─────────────────────────────────────────────────────────── */
+/* ── Logout ─────────────────────────────────────────────────────── */
 
-export const logoutThunk = createAsyncThunk<
-  void,
-  void,
-  { rejectValue: string }
->("auth/logout", async (_, { rejectWithValue }) => {
-  try {
-    const authBase = import.meta.env.VITE_API_AUTH_URL ?? "";
-
-    await fetch(`${authBase}/auth/logout`, {
-      method: "POST",
-      credentials: "include",
-    });
-  } catch {
-    return rejectWithValue("Logout failed");
+export const logoutThunk = createAsyncThunk<void, void, { rejectValue: string }>(
+  "auth/logout",
+  async (_, { rejectWithValue }) => {
+    try {
+      await authApi.post("/auth/logout");
+    } catch {
+      return rejectWithValue("Logout failed");
+    } finally {
+      localStorage.removeItem(STORAGE_KEYS.TOKEN);
+    }
   }
-});
+);
 
-/* ───────────────────────────────────────────────────────────
-   INITIAL STATE
-─────────────────────────────────────────────────────────── */
+/* ── Initial state ──────────────────────────────────────────────── */
 
 const initialState: AuthState = {
   user: null,
@@ -93,14 +69,11 @@ const initialState: AuthState = {
   error: null,
 };
 
-/* ───────────────────────────────────────────────────────────
-   SLICE
-─────────────────────────────────────────────────────────── */
+/* ── Slice ──────────────────────────────────────────────────────── */
 
 const authSlice = createSlice({
   name: "auth",
   initialState,
-
   reducers: {
     logout(state) {
       state.user = null;
@@ -108,72 +81,48 @@ const authSlice = createSlice({
       state.isAuthenticated = false;
       state.error = null;
       state.isLoading = false;
+      localStorage.removeItem(STORAGE_KEYS.TOKEN);
     },
-
-    setAuth(
-      state,
-      action: PayloadAction<{ access_token: string; user: User }>
-    ) {
+    setAuth(state, action: PayloadAction<{ access_token: string; user: User }>) {
       state.token = action.payload.access_token;
       state.user = action.payload.user;
       state.isAuthenticated = true;
+      localStorage.setItem(STORAGE_KEYS.TOKEN, action.payload.access_token);
     },
-
     clearError(state) {
       state.error = null;
     },
   },
-
   extraReducers: (builder) => {
     builder
-
-      /* ───── Bootstrap ───── */
-
-      .addCase(bootstrapAuth.pending, (state) => {
-        state.isBootstrapping = true;
-      })
-
+      // Bootstrap
+      .addCase(bootstrapAuth.pending, (state) => { state.isBootstrapping = true; })
       .addCase(bootstrapAuth.fulfilled, (state, action) => {
-        console.log("BOOTSTRAP SUCCESS", action.payload);
-
         state.isBootstrapping = false;
         state.isAuthenticated = true;
         state.token = action.payload.access_token;
         state.user = action.payload.user;
       })
-
       .addCase(bootstrapAuth.rejected, (state) => {
         state.isBootstrapping = false;
         state.isAuthenticated = false;
         state.user = null;
         state.token = null;
       })
-
-      /* ───── Login ───── */
-
-      .addCase(loginThunk.pending, (state) => {
-        state.isLoading = true;
-        state.error = null;
-      })
-
+      // Login
+      .addCase(loginThunk.pending, (state) => { state.isLoading = true; state.error = null; })
       .addCase(loginThunk.fulfilled, (state, action) => {
         state.isLoading = false;
         state.isAuthenticated = true;
         state.token = action.payload.access_token;
         state.user = action.payload.user;
       })
-
       .addCase(loginThunk.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload ?? "Login failed";
       })
-
-      /* ───── Logout ───── */
-
-      .addCase(logoutThunk.pending, (state) => {
-        state.isLoading = true;
-      })
-
+      // Logout
+      .addCase(logoutThunk.pending, (state) => { state.isLoading = true; })
       .addCase(logoutThunk.fulfilled, (state) => {
         state.user = null;
         state.token = null;
@@ -181,13 +130,9 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.error = null;
       })
-
-      .addCase(logoutThunk.rejected, (state) => {
-        state.isLoading = false;
-      });
+      .addCase(logoutThunk.rejected, (state) => { state.isLoading = false; });
   },
 });
 
 export const { logout, setAuth, clearError } = authSlice.actions;
-
 export default authSlice.reducer;

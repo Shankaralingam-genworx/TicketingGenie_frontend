@@ -1,259 +1,449 @@
-import React, { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import React, { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
-  assignTicket,
   fetchMyAgents,
-  updateTicketStatus,
+  assignTicket, reassignEscalatedTicket, fetchTicketById,
   AgentUser,
-} from "../../../../features/users/services/userApi";
-import { fetchTicketById } from "../../../../features/users/services/userApi";
-import { TicketResponse } from "../../types/ticket.types";
+} from '../../../../features/users/services/userApi';
+import { TicketResponse } from '../../types/ticket.types';
 import {
-  StatusBadge,
-  PriorityBadge,
-  SlaChip,
-} from "../../components/TicketBadges";
-import CommentThread from "../../../../components/common/CommentThread";
+  StatusBadge, PriorityBadge, SlaChip,
+  EscalatedBadge, TicketSlaBreachBadges,
+} from '../../components/TicketBadges';
+import SlaCountdown  from '../../../tickets/components/SlaCountdown';
+import CommentThread from '../../../../components/common/CommentThread';
+import { BackIcon } from '@/components/icons';
 
 function fmt(iso: string | null | undefined) {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
+  if (!iso) return '—';
+  return new Date(iso).toLocaleString('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
   });
 }
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div style={{ display: "flex", gap: 8, alignItems: "flex-start", padding: "9px 0", borderBottom: "1px solid var(--slate-100)" }}>
-      <span style={{ minWidth: 150, fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--slate-500)", paddingTop: 2 }}>
+    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start',
+      padding: '9px 0', borderBottom: '1px solid var(--slate-100)' }}>
+      <span style={{ minWidth: 160, fontSize: '0.73rem', fontWeight: 700,
+        textTransform: 'uppercase', letterSpacing: '0.05em',
+        color: 'var(--slate-500)', paddingTop: 2 }}>
         {label}
       </span>
-      <span style={{ color: "var(--slate-800)", fontSize: "0.88rem" }}>{children}</span>
+      <span style={{ color: 'var(--slate-800)', fontSize: '0.88rem' }}>{children}</span>
     </div>
   );
 }
 
-const LEAD_TRANSITIONS: Record<string, string[]> = {
-  new:              ["in_progress"],
-  acknowledged:     ["in_progress"],
-  assigned:         ["in_progress"],
-  in_progress:      ["resolved", "on_hold", "closed"],
-  on_hold:          ["in_progress", "resolved", "closed"],
-  resolved:         ["closed", "reopened"],
-  closed:           [],
-  reopened:         ["in_progress"],
-  // uppercase fallbacks
-  NEW:              ["in_progress"],
-  IN_PROGRESS:      ["resolved", "on_hold", "closed"],
-  PENDING_CUSTOMER: ["in_progress", "resolved", "closed"],
-  RESOLVED:         ["closed"],
-  CLOSED:           [],
-};
 
-const STATUS_LABELS: Record<string, string> = {
-  in_progress:      "Set In Progress",
-  resolved:         "Mark Resolved",
-  on_hold:          "Put On Hold",
-  closed:           "Close Ticket",
-  reopened:         "Reopen",
-  // uppercase fallbacks
-  IN_PROGRESS:      "Set In Progress",
-  RESOLVED:         "Mark Resolved",
-  PENDING_CUSTOMER: "Waiting on Customer",
-  CLOSED:           "Close Ticket",
-};
+// ── Escalation Reassign modal ─────────────────────────────────────────────────
 
-const STATUS_BTN_COLOR: Record<string, string> = {
-  closed:           "#374151",
-  CLOSED:           "#374151",
-  resolved:         "#16A34A",
-  RESOLVED:         "#16A34A",
-  on_hold:          "#7C3AED",
-  PENDING_CUSTOMER: "#7C3AED",
-};
+function EscalationReassignModal({ ticket, agents, onReassign, onClose }: {
+  ticket:     TicketResponse;
+  agents:     AgentUser[];
+  onReassign: (newAgentId: number, responseMins?: number, resolutionMins?: number) => Promise<void>;
+  onClose:    () => void;
+}) {
+  const oldAgentId = ticket.escalation?.old_agent_id;
+  const sla        = ticket.sla;
 
-const BackIcon = () => (
-  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" style={{ width: 15, height: 15 }}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M15 10H5M9 6l-4 4 4 4" />
-  </svg>
-);
+  const [sel,          setSel]          = useState('');
+  const [respOverride, setRespOverride] = useState('');
+  const [resoOverride, setResoOverride] = useState('');
+  const [showOverride, setShowOverride] = useState(false);
+  const [busy,         setBusy]         = useState(false);
+  const [err,          setErr]          = useState<string | null>(null);
+
+  const eligibleAgents = agents.filter(a => a.id !== oldAgentId);
+
+  const submit = async () => {
+    const id = parseInt(sel, 10);
+    if (isNaN(id)) return;
+    setBusy(true); setErr(null);
+    try {
+      await onReassign(
+        id,
+        respOverride ? parseFloat(respOverride) : undefined,
+        resoOverride ? parseFloat(resoOverride) : undefined,
+      );
+      onClose();
+    } catch (e: any) { setErr(e.message); setBusy(false); }
+  };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+      zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ background: 'white', borderRadius: 14, padding: 28, width: 480,
+        boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 4 }}>
+          <h3 style={{ margin: 0 }}>Reassign Escalated Ticket</h3>
+          <EscalatedBadge />
+        </div>
+        <p style={{ margin: '0 0 14px', fontSize: '0.82rem', color: 'var(--slate-500)' }}>
+          {ticket.ticket_number} — {ticket.title}
+        </p>
+        {ticket.escalation && (
+          <div style={{ padding: '10px 14px', background: '#FEF2F2',
+            border: '1px solid #FCA5A5', borderRadius: 9, marginBottom: 14,
+            fontSize: '0.82rem', color: '#B91C1C' }}>
+            <strong>Breach reason:</strong> {ticket.escalation.reason.replace(/_/g, ' ')}
+          </div>
+        )}
+        <p style={{ margin: '0 0 14px', fontSize: '0.82rem', color: 'var(--slate-600)' }}>
+          Previous agent:{' '}
+          <strong style={{ color: '#DC2626' }}>
+            {agents.find(a => a.id === oldAgentId)?.name ?? `Agent #${oldAgentId}`}
+          </strong>
+          <span style={{ opacity: 0.6 }}> (blocked)</span>
+        </p>
+        {err && <p style={{ color: '#DC2626', fontSize: '0.83rem', marginBottom: 8 }}>{err}</p>}
+
+        <label style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase',
+          letterSpacing: '0.06em', color: 'var(--slate-600)' }}>Reassign to</label>
+        <select value={sel} onChange={e => setSel(e.target.value)}
+          style={{ width: '100%', padding: '10px 12px', border: '1.5px solid var(--slate-200)',
+            borderRadius: 9, fontFamily: 'var(--font)', fontSize: '0.9rem',
+            marginTop: 6, background: 'var(--slate-50)' }}>
+          <option value="">— Choose new agent —</option>
+          {eligibleAgents.map(a => (
+            <option key={a.id} value={a.id}>{a.name ?? a.email}</option>
+          ))}
+        </select>
+
+        {sla && (
+          <div style={{ marginTop: 10, padding: '9px 12px', background: '#F0FDF4',
+            borderRadius: 8, fontSize: '0.79rem', color: '#166534' }}>
+            SLA defaults — Response:{' '}
+            <strong>{sla.additional_response_mins || sla.response_time_mins} min</strong>
+            {' · '}
+            Resolution:{' '}
+            <strong>{sla.additional_resolution_mins || sla.resolution_time_mins} min</strong>
+          </div>
+        )}
+
+        <button onClick={() => setShowOverride(v => !v)}
+          style={{ marginTop: 10, background: 'none', border: 'none', cursor: 'pointer',
+            fontSize: '0.79rem', color: 'var(--slate-500)', fontWeight: 600, padding: 0 }}>
+          {showOverride ? '▲ Hide overrides' : '▼ Override SLA windows (optional)'}
+        </button>
+
+        {showOverride && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 8 }}>
+            {[
+              { label: 'Response window (mins)', val: respOverride, set: setRespOverride },
+              { label: 'Resolution window (mins)', val: resoOverride, set: setResoOverride },
+            ].map(({ label, val, set }) => (
+              <div key={label}>
+                <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--slate-500)',
+                  textTransform: 'uppercase', letterSpacing: '0.05em',
+                  display: 'block', marginBottom: 4 }}>{label}</label>
+                <input type="number" min="1" placeholder="mins"
+                  value={val} onChange={e => set(e.target.value)}
+                  style={{ width: '100%', padding: '8px 10px',
+                    border: '1.5px solid var(--slate-200)', borderRadius: 8,
+                    fontFamily: 'var(--font)', fontSize: '0.88rem' }} />
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+          <button className="btn btn--primary" onClick={submit}
+            disabled={!sel || busy} style={{ background: '#DC2626' }}>
+            {busy ? 'Reassigning…' : '⚡ Reassign'}
+          </button>
+          <button className="btn btn--outline" onClick={onClose} disabled={busy}>Cancel</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function LeadTicketDetail() {
-  const { id } = useParams<{ id: string }>();
+  const { id }   = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const [ticket,       setTicket]       = useState<TicketResponse | null>(null);
-  const [agents,       setAgents]       = useState<AgentUser[]>([]);
-  const [loading,      setLoading]      = useState(true);
-  const [error,        setError]        = useState<string | null>(null);
-  const [updating,     setUpdating]     = useState(false);
-  const [reassignAgent, setReassignAgent] = useState<string>("");
-  const [reassigning,  setReassigning]  = useState(false);
+  const [ticket,         setTicket]         = useState<TicketResponse | null>(null);
+  const [agents,         setAgents]         = useState<AgentUser[]>([]);
+  const [loading,        setLoading]        = useState(true);
+  const [error,          setError]          = useState<string | null>(null);
+  const [showReassign,   setShowReassign]   = useState(false);
+  const [quickAssignSel, setQuickAssignSel] = useState('');
+  const [assigning,      setAssigning]      = useState(false);
 
   useEffect(() => {
     if (!id) return;
     setLoading(true);
     Promise.all([fetchTicketById(Number(id)), fetchMyAgents()])
-      .then(([t, a]) => { setTicket(t); setAgents(a); })
+      .then(([t, a]) => { setTicket(t); setAgents(a ?? []); })
       .catch((e: any) => setError(e.message))
       .finally(() => setLoading(false));
   }, [id]);
 
-  const moveStatus = async (newStatus: string) => {
-    if (!ticket) return;
+  const doQuickAssign = async () => {
+    if (!ticket || !quickAssignSel) return;
+    const agentId = parseInt(quickAssignSel, 10);
+    if (isNaN(agentId)) return;
+    setAssigning(true); setError(null);
     try {
-      setUpdating(true);
-      setError(null);
-      setTicket(await updateTicketStatus(ticket.id, newStatus));
-    } catch (e: any) {
-      setError(e.message);
-    } finally {
-      setUpdating(false);
-    }
+      const updated = await assignTicket(ticket.id, agentId);
+      setTicket(updated); setQuickAssignSel('');
+    } catch (e: any) { setError(e.message); }
+    finally { setAssigning(false); }
   };
 
-  const doReassign = async () => {
-    if (!ticket || !reassignAgent) return;
-    // Parse the selected agent id — the dropdown stores `a.id` (always defined)
-    const agentId = parseInt(reassignAgent, 10);
-    if (isNaN(agentId)) return;
-    try {
-      setReassigning(true);
-      setError(null);
-      setTicket(await assignTicket(ticket.id, agentId));
-      setReassignAgent("");
-    } catch (e: any) {
-      setError(e.message);
-    } finally {
-      setReassigning(false);
-    }
+  const doEscalatedReassign = async (
+    newAgentId: number,
+    responseMins?: number,
+    resolutionMins?: number,
+  ) => {
+    if (!ticket) return;
+    const updated = await reassignEscalatedTicket(ticket.id, {
+      new_agent_id:              newAgentId,
+      escalated_response_mins:   responseMins ?? null,
+      escalated_resolution_mins: resolutionMins ?? null,
+    });
+    setTicket(updated);
   };
 
   if (loading)
-    return <div style={{ padding: "60px 0", textAlign: "center", color: "var(--slate-400)" }}>Loading…</div>;
+    return <div style={{ padding: '60px 0', textAlign: 'center', color: 'var(--slate-400)' }}>Loading…</div>;
   if (error && !ticket)
-    return <div style={{ padding: "14px 18px", background: "#FEF2F2", border: "1px solid #FCA5A5", borderRadius: 10, color: "#B91C1C" }}>{error}</div>;
+    return <div style={{ padding: '14px 18px', background: '#FEF2F2',
+      border: '1px solid #FCA5A5', borderRadius: 10, color: '#B91C1C' }}>{error}</div>;
   if (!ticket) return null;
 
-  const nextStatuses = LEAD_TRANSITIONS[ticket.status] ?? [];
-
-  // Resolve the currently-assigned agent's name for display
-  const assignedAgent = agents.find((a) => a.id === ticket.assigned_agent_id);
+  const assignedAgent = agents.find(a => a.id === ticket.assigned_agent_id);
 
   return (
     <>
-      <button className="btn btn--outline btn--sm" style={{ marginBottom: 16 }} onClick={() => navigate(-1)}>
-        <BackIcon /> Back
-      </button>
+      {showReassign && ticket.is_escalated && (
+        <EscalationReassignModal
+          ticket={ticket} agents={agents}
+          onReassign={doEscalatedReassign}
+          onClose={() => setShowReassign(false)} />
+      )}
 
+            <div> 
+               <button
+                className="btn btn--outline btn--sm"
+                style={{ marginBottom: 12 }}
+                onClick={() => navigate(-1)}
+              >
+                <BackIcon /> Back
+              </button></div> 
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 4 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10,
+        flexWrap: 'wrap', marginBottom: 4 }}>
         <h1 className="dash-page-title" style={{ margin: 0 }}>{ticket.title}</h1>
         <StatusBadge status={ticket.status} />
-        {ticket.is_escalated && (
-          <span style={{ background: "#FFF1F2", color: "#E11D48", padding: "3px 10px", borderRadius: 99, fontSize: "0.75rem", fontWeight: 700 }}>
-            ⚡ Escalated
-          </span>
-        )}
+        {ticket.is_escalated && <EscalatedBadge />}
       </div>
-      <p style={{ color: "var(--slate-400)", fontSize: "0.82rem", margin: "4px 0 20px" }}>
+      <p style={{ color: 'var(--slate-400)', fontSize: '0.82rem', margin: '4px 0 6px' }}>
         {ticket.ticket_number} · Opened {fmt(ticket.created_at)}
       </p>
 
-      {/* Action bar */}
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20, alignItems: "center" }}>
-        {nextStatuses.map((s) => (
-          <button
-            key={s}
-            className="btn btn--primary"
-            onClick={() => moveStatus(s)}
-            disabled={updating}
-            style={{ background: STATUS_BTN_COLOR[s] ?? "#6D28D9" }}
-          >
-            {updating ? "…" : (STATUS_LABELS[s] ?? s)}
-          </button>
-        ))}
+      {/* SLA breach badges */}
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
+        <TicketSlaBreachBadges ticket={ticket} />
+      </div>
 
-        {/* Reassign — uses a.id (always present int) as the option value */}
-        <div style={{ display: "flex", gap: 6, alignItems: "center", marginLeft: "auto" }}>
-          <select
-            style={{ padding: "8px 11px", border: "1.5px solid var(--slate-200)", borderRadius: 8, fontFamily: "var(--font)", fontSize: "0.85rem", background: "var(--slate-50)" }}
-            value={reassignAgent}
-            onChange={(e) => setReassignAgent(e.target.value)}
-          >
-            <option value="">Assign to…</option>
-            {agents.map((a) => (
-              // KEY FIX: use a.id (always a valid int) not a.user_id (optional/undefined)
-              <option key={a.id} value={String(a.id)}>
-                {a.name ?? a.email}
-              </option>
-            ))}
-          </select>
-          <button className="btn btn--outline" onClick={doReassign} disabled={!reassignAgent || reassigning}>
-            {reassigning ? "…" : "Assign"}
+      {/* Action bar — assign / reassign only */}
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20, alignItems: 'center' }}>
+        {ticket.is_escalated ? (
+          <button className="btn btn--primary"
+            onClick={() => setShowReassign(true)}
+            style={{ background: '#DC2626' }}>
+            ⚡ Reassign
           </button>
-        </div>
+        ) : (
+          <>
+            <select
+              style={{ padding: '8px 11px', border: '1.5px solid var(--slate-200)',
+                borderRadius: 8, fontFamily: 'var(--font)', fontSize: '0.85rem',
+                background: 'var(--slate-50)' }}
+              value={quickAssignSel}
+              onChange={e => setQuickAssignSel(e.target.value)}>
+              <option value="">Assign to…</option>
+              {agents.map(a => (
+                <option key={a.id} value={String(a.id)}>{a.name ?? a.email}</option>
+              ))}
+            </select>
+            <button className="btn btn--outline"
+              onClick={doQuickAssign}
+              disabled={!quickAssignSel || assigning}>
+              {assigning ? '…' : 'Assign'}
+            </button>
+          </>
+        )}
       </div>
 
       {error && (
-        <div style={{ padding: "10px 14px", background: "#FEF2F2", border: "1px solid #FCA5A5", borderRadius: 8, color: "#B91C1C", fontSize: "0.83rem", marginBottom: 16 }}>
+        <div style={{ padding: '10px 14px', background: '#FEF2F2',
+          border: '1px solid #FCA5A5', borderRadius: 8,
+          color: '#B91C1C', fontSize: '0.83rem', marginBottom: 16 }}>
           {error}
         </div>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 20, alignItems: "start" }}>
-        {/* Left */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <div style={{ background: "white", border: "1px solid var(--slate-200)", borderRadius: 12, padding: 22 }}>
-            <h3 style={{ margin: "0 0 10px", fontSize: "0.85rem", color: "var(--slate-600)", textTransform: "uppercase", letterSpacing: "0.07em" }}>Description</h3>
-            <p style={{ margin: 0, color: "var(--slate-600)", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{ticket.description}</p>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 310px', gap: 20, alignItems: 'start' }}>
+
+        {/* Left — description + escalation info + comments */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+          {/* Description */}
+          <div style={{ background: 'white', border: '1px solid var(--slate-200)',
+            borderRadius: 12, padding: 22 }}>
+            <h3 style={{ margin: '0 0 10px', fontSize: '0.85rem', color: 'var(--slate-600)',
+              textTransform: 'uppercase', letterSpacing: '0.07em' }}>Description</h3>
+            <p style={{ margin: 0, color: 'var(--slate-600)', lineHeight: 1.7,
+              whiteSpace: 'pre-wrap' }}>{ticket.description}</p>
           </div>
 
+          {/* Priority override notice */}
           {ticket.priority_overridden && (
-            <div style={{ padding: "12px 16px", background: "#FFF7ED", border: "1px solid #FED7AA", borderRadius: 10, fontSize: "0.83rem", color: "#92400E" }}>
+            <div style={{ padding: '12px 16px', background: '#FFF7ED',
+              border: '1px solid #FED7AA', borderRadius: 10,
+              fontSize: '0.83rem', color: '#92400E' }}>
               <strong>Priority Overridden</strong> — {ticket.priority_override_justification}
             </div>
           )}
 
-          <div style={{ background: "white", border: "1px solid var(--slate-200)", borderRadius: 12, padding: 22 }}>
+          {/* Escalation info panel */}
+          {ticket.is_escalated && ticket.escalation && (
+            <div style={{ background: '#FFF1F2', border: '1px solid #FCA5A5',
+              borderRadius: 12, padding: 20 }}>
+              <h3 style={{ margin: '0 0 12px', fontSize: '0.85rem', color: '#9F1239',
+                textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                ⚡ Escalation Details
+              </h3>
+              <Row label="Reason">
+                <span style={{ textTransform: 'capitalize' }}>
+                  {ticket.escalation.reason.replace(/_/g, ' ')}
+                </span>
+              </Row>
+              <Row label="Escalated by">{ticket.escalation.escalated_by}</Row>
+              <Row label="Escalated at">{fmt(ticket.escalation.escalated_at)}</Row>
+              <Row label="Old agent">
+                <span style={{ color: '#DC2626', fontWeight: 600 }}>
+                  {agents.find(a => a.id === ticket.escalation?.old_agent_id)?.name
+                    ?? `Agent #${ticket.escalation.old_agent_id}`}
+                </span>
+              </Row>
+              {ticket.escalation.new_agent_id && (
+                <Row label="Reassigned to">
+                  <span style={{ color: '#059669', fontWeight: 600 }}>
+                    {agents.find(a => a.id === ticket.escalation?.new_agent_id)?.name
+                      ?? `Agent #${ticket.escalation.new_agent_id}`}
+                  </span>
+                </Row>
+              )}
+              {ticket.escalation.notes && (
+                <Row label="Notes">
+                  <span style={{ fontSize: '0.82rem', color: '#9F1239', opacity: 0.8 }}>
+                    {ticket.escalation.notes}
+                  </span>
+                </Row>
+              )}
+            </div>
+          )}
+
+          {/* Comments */}
+          <div style={{ background: 'white', border: '1px solid var(--slate-200)',
+            borderRadius: 12, padding: 22 }}>
             <CommentThread ticketId={ticket.id} currentRole="TEAM_LEAD" />
           </div>
         </div>
 
-        {/* Right */}
-        <div style={{ background: "white", border: "1px solid var(--slate-200)", borderRadius: 12, padding: 20 }}>
-          <h3 style={{ margin: "0 0 8px", fontSize: "0.8rem", color: "var(--slate-500)", textTransform: "uppercase", letterSpacing: "0.07em" }}>Details</h3>
+        {/* Right — detail sidebar */}
+        <div style={{ background: 'white', border: '1px solid var(--slate-200)',
+          borderRadius: 12, padding: 20 }}>
+
+          <h3 style={{ margin: '0 0 8px', fontSize: '0.8rem', color: 'var(--slate-500)',
+            textTransform: 'uppercase', letterSpacing: '0.07em' }}>Details</h3>
           <Row label="Ticket #">{ticket.ticket_number}</Row>
           <Row label="Priority"><PriorityBadge priority={ticket.priority} /></Row>
           <Row label="Customer Priority"><PriorityBadge priority={ticket.customer_priority} /></Row>
           <Row label="Severity">{ticket.severity}</Row>
-          <Row label="Category">{ticket.issue?.name ?? "—"}</Row>
+          <Row label="Category">{ticket.issue?.name ?? '—'}</Row>
           <Row label="Customer Tier">{ticket.customer_tier}</Row>
           <Row label="Assigned Agent">
             {assignedAgent ? (
-              <span style={{ fontWeight: 600, color: "#059669" }}>{assignedAgent.name ?? assignedAgent.email}</span>
+              <span style={{ fontWeight: 600, color: '#059669' }}>
+                {assignedAgent.name ?? assignedAgent.email}
+              </span>
             ) : ticket.assigned_agent_id ? (
-              <span style={{ fontWeight: 600, color: "#059669" }}>Agent #{ticket.assigned_agent_id}</span>
+              <span style={{ fontWeight: 600, color: '#059669' }}>
+                Agent #{ticket.assigned_agent_id}
+              </span>
             ) : (
-              <span style={{ color: "#EF4444", fontWeight: 600 }}>Unassigned</span>
+              <span style={{ color: '#EF4444', fontWeight: 600 }}>Unassigned</span>
             )}
           </Row>
 
-          <div style={{ margin: "12px 0 6px", paddingTop: 12, borderTop: "1px solid var(--slate-100)" }}>
-            <span style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--slate-400)" }}>SLA</span>
+          {/* ── Normal SLA ── */}
+          <div style={{ margin: '12px 0 6px', paddingTop: 12,
+            borderTop: '1px solid var(--slate-100)' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase',
+              letterSpacing: '0.05em', color: 'var(--slate-400)' }}>
+              SLA (Normal)
+            </span>
           </div>
-          <Row label="Response Due"><SlaChip due={ticket.response_due_at} /></Row>
-          <Row label="Resolution Due"><SlaChip due={ticket.resolution_due_at} /></Row>
+          <Row label="Response Due">
+            <SlaChip due={ticket.response_due_at} status={ticket.status} />
+          </Row>
+          <Row label="Resolution Due">
+            {ticket.work_started_at
+              ? <SlaChip due={ticket.resolution_due_at} status={ticket.status} />
+              : <span style={{ color: 'var(--slate-400)', fontSize: '0.8rem' }}>Not started yet</span>
+            }
+          </Row>
           <Row label="First Response">{fmt(ticket.first_response_at)}</Row>
 
-          <div style={{ margin: "12px 0 6px", paddingTop: 12, borderTop: "1px solid var(--slate-100)" }}>
-            <span style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--slate-400)" }}>Timeline</span>
+          {/* ── Escalated SLA (only when escalated) ── */}
+          {ticket.is_escalated && (
+            <>
+              <div style={{ margin: '12px 0 6px', paddingTop: 12,
+                borderTop: '1px solid var(--slate-100)' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase',
+                  letterSpacing: '0.05em', color: '#E11D48' }}>
+                  ⚡ Escalated SLA
+                </span>
+              </div>
+              <Row label="Esc. Response Due">
+                {ticket.escalated_response_due_at ? (
+                  <SlaCountdown
+                    due={ticket.escalated_response_due_at}
+                    status={ticket.status}
+                    escalated />
+                ) : (
+                  <span style={{ color: 'var(--slate-400)', fontSize: '0.8rem' }}>Not reassigned yet</span>
+                )}
+              </Row>
+              <Row label="Esc. Resolution Due">
+                {ticket.escalated_resolution_due_at ? (
+                  <SlaCountdown
+                    due={ticket.escalated_resolution_due_at}
+                    status={ticket.status}
+                    escalated />
+                ) : (
+                  <span style={{ color: 'var(--slate-400)', fontSize: '0.8rem' }}>New agent not started</span>
+                )}
+              </Row>
+            </>
+          )}
+
+          {/* ── Timeline ── */}
+          <div style={{ margin: '12px 0 6px', paddingTop: 12,
+            borderTop: '1px solid var(--slate-100)' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase',
+              letterSpacing: '0.05em', color: 'var(--slate-400)' }}>Timeline</span>
           </div>
           <Row label="Created">{fmt(ticket.created_at)}</Row>
+          <Row label="Work Started">{fmt(ticket.work_started_at)}</Row>
           <Row label="Updated">{fmt(ticket.updated_at)}</Row>
           <Row label="Resolved">{fmt(ticket.resolved_at)}</Row>
           <Row label="Closed">{fmt(ticket.closed_at)}</Row>

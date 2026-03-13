@@ -1,11 +1,20 @@
+/**
+ * app/middleware.ts
+ * Redux middleware. loggerMiddleware is dev-only.
+ * authMiddleware was a no-op passthrough and has been removed.
+ */
+
 import type { Middleware } from '@reduxjs/toolkit';
 import type { RootState } from './rootReducer';
 
 export const loggerMiddleware: Middleware<{}, RootState> =
   (store) => (next) => (action) => {
     if (import.meta.env.DEV) {
-      console.group(`[Action] ${(action as any).type}`);
-      console.log("User:", action.payload?.user);
+      const type =
+        typeof action === 'object' && action && 'type' in action
+          ? (action as any).type
+          : 'unknown';
+      console.group(`[Action] ${type}`);
       console.log('Prev:', store.getState());
       const result = next(action);
       console.log('Next:', store.getState());
@@ -14,6 +23,3 @@ export const loggerMiddleware: Middleware<{}, RootState> =
     }
     return next(action);
   };
-
-export const authMiddleware: Middleware<{}, RootState> =
-  (_store) => (next) => (action) => next(action);

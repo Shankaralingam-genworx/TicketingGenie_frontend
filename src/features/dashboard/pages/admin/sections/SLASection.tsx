@@ -45,8 +45,18 @@ const SLAForm: React.FC<{
   );
   const [isActive, setIsActive] = useState(initial?.is_active ?? true);
 
+  const [addResp, setAddResp] = useState(
+  String(initial?.additional_response_mins ?? 0),
+);
+
+const [addReso, setAddReso] = useState(
+  String(initial?.additional_resolution_mins ?? 0),
+);
+
   const respN = parseInt(resp, 10);
   const resoN = parseInt(reso, 10);
+  const addRespN = parseInt(addResp, 10);
+  const addResoN = parseInt(addReso, 10);
   const valid =
     name.trim() !== "" &&
     !isNaN(respN) &&
@@ -140,7 +150,36 @@ const SLAForm: React.FC<{
           )}
         </Field>
       </div>
+      <div className="adm-form-row">
+  <Field label="Additional response (mins)">
+    <Input
+      type="number"
+      min={0}
+      value={addResp}
+      onChange={(e) => setAddResp(e.target.value)}
+    />
+    {!isNaN(addRespN) && addRespN > 0 && (
+      <span className="adm-hint">
+        +{minsToHuman(addRespN)} escalation window
+      </span>
+    )}
+  </Field>
 
+  <Field label="Additional resolution (mins)">
+    <Input
+      type="number"
+      min={0}
+      value={addReso}
+      onChange={(e) => setAddReso(e.target.value)}
+    />
+    {!isNaN(addResoN) && addResoN > 0 && (
+      <span className="adm-hint">
+        +{minsToHuman(addResoN)} escalation window
+      </span>
+    )}
+  </Field>
+</div>
+     
       <label className="adm-check-row">
         <input
           type="checkbox"
@@ -168,6 +207,8 @@ const SLAForm: React.FC<{
               customer_tier: tier,
               response_time_mins: respN,
               resolution_time_mins: resoN,
+              additional_response_mins: addRespN || 0,
+              additional_resolution_mins: addResoN || 0,
               is_active: isActive,
             })
           }
@@ -243,7 +284,7 @@ const SLASection: React.FC<Props> = ({
 
   const handleDelete = async (s: SLA) => {
     try {
-      await api.del(`/sla/${s.id}`);
+      await api.delete(`/sla/${s.id}`);
       onToast("SLA deleted");
       onRefresh();
     } catch (e: any) {
@@ -279,7 +320,7 @@ const SLASection: React.FC<Props> = ({
             onClick={onRefresh}
             disabled={loading}
           >
-            <RefreshIcon /> Refresh
+           <RefreshIcon style={{ width: "24px", height: "24px" }} /> Refresh
           </button>
           <button className="btn btn--primary" onClick={() => openCreate()}>
             <PlusIcon /> New SLA

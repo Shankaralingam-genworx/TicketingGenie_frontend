@@ -1,13 +1,12 @@
-import axiosInstance from '../../../lib/axios';
-import { API_ROUTES } from '../../../config/constants';
+/**
+ * features/auth/services/authService.ts
+ * Uses the centralized fetchClient instead of a separate axios instance.
+ */
+
+import { authApi } from '@/lib/fetchClient';
 import type { LoginRequest, LoginResponse } from '../types';
 
 export const authService = {
-  login: async (credentials: LoginRequest): Promise<LoginResponse> => {
-    const { data } = await axiosInstance.post<LoginResponse>(
-      API_ROUTES.AUTH.LOGIN,
-      credentials
-    );
-    return data;
-  },
+  login: (credentials: LoginRequest): Promise<LoginResponse> =>
+    authApi.post<LoginResponse>('/auth/login', credentials),
 };

@@ -311,7 +311,7 @@ const TeamsSection: React.FC<Props> = ({ teams, staff, loading, onRefresh, api, 
 
   const handleDelete = async (t: TeamDetail) => {
     try {
-      await api.del(`/admin/teams/${t.id}`, 'auth');
+      await api.delete(`/admin/teams/${t.id}`, 'auth');
       onToast(`Team "${t.name}" deleted.`);
       onRefresh();
     } catch (e: any) {
@@ -342,7 +342,7 @@ const TeamsSection: React.FC<Props> = ({ teams, staff, loading, onRefresh, api, 
         </div>
         <div className="adm-hdr-actions">
           <button className="btn btn--outline btn--sm" onClick={onRefresh} disabled={loading}>
-            <RefreshIcon /> Refresh
+             <RefreshIcon style={{ width: "24px", height: "24px" }} /> Refresh
           </button>
           <button className="btn btn--primary" onClick={openCreate}>
             <PlusIcon /> New Team
