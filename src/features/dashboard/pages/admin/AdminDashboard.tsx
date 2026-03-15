@@ -11,15 +11,14 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '@/hooks/useAppDispatch';
 import { logoutThunk } from '@/features/auth/slices/authSlice';
+import { useSessionExpiry } from '@/hooks/useSessionExpiry';
 
 import type { Issue, IssueResolver, SLA, StaffMember, TeamDetail } from './types';
 import { NAV } from './constants';
 import { useApi } from './hooks/useApi';
 import { Spinner } from '@/components/ui';
 import { ToastStack, useToasts } from '@/components/ui/Toast';
-import DashboardLayout, { type NavItem } from '@/components/layout/DashboardLayout';
-import ProfilePanel from '@/components/layout/ProfilePanel';
-import ChangePasswordModal from '@/components/forms/ChangePasswordModal';
+import DashboardLayout, { type NavItem } from '@/layouts/DashboardLayout';
 
 import {
   GridIcon, IssueIcon, SLAIcon, MapIcon, StaffIcon, TeamIcon, EmailIcon,
@@ -33,11 +32,12 @@ import StaffSection      from './sections/StaffSection';
 import TeamsSection      from './sections/TeamsSection';
 import EmailConfigSection from './sections/EmailConfigSection';
 import NotificationBell  from '@/features/notifications/components/NotificationBell';
+import AdminProfile      from '@/features/dashboard/pages/AdminProfile';
 
 import './DashBoard.css';
 import './AdminDashboard.css';
 
-type ActiveSection = 'overview' | 'issues' | 'sla' | 'resolvers' | 'staff' | 'teams' | 'email';
+type ActiveSection = 'overview' | 'issues' | 'sla' | 'resolvers' | 'staff' | 'teams' | 'email' | 'profile';
 
 const ACCENT = '#7C3AED';
 
@@ -78,9 +78,7 @@ const AdminDashboard: React.FC = () => {
   const [loadingTm, setLoadingTm] = useState(false);
 
   const { toasts, addToast, removeToast } = useToasts();
-
-  const [showProfile,  setShowProfile]  = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
+  useSessionExpiry(addToast);
 
   const api = useApi(token);
 
@@ -165,7 +163,7 @@ const AdminDashboard: React.FC = () => {
         user={user}
         token={token}
         onLogout={handleLogout}
-        onProfileClick={() => setShowProfile(true)}
+        onProfileClick={() => setActive('profile')}
         sidebarExtra={sidebarExtra}
         topbarRight={topbarRight}
       >
@@ -176,25 +174,10 @@ const AdminDashboard: React.FC = () => {
         {active === 'staff'     && <StaffSection staff={staff} loading={loadingSt} onRefresh={() => { loadStaff(); loadTeams(); }} api={api} onToast={addToast} />}
         {active === 'teams'     && <TeamsSection teams={teams} staff={staff} loading={loadingTm} onRefresh={() => { loadTeams(); loadStaff(); }} api={api} onToast={addToast} />}
         {active === 'email'     && <EmailConfigSection api={api} onToast={addToast} />}
+        {active === 'profile'   && <AdminProfile />}
       </DashboardLayout>
 
       <ToastStack toasts={toasts} onRemove={removeToast} />
-
-      {showProfile && (
-        <ProfilePanel
-          user={user}
-          onClose={() => setShowProfile(false)}
-          onChangePassword={() => { setShowProfile(false); setShowPassword(true); }}
-        />
-      )}
-
-      {showPassword && (
-        <ChangePasswordModal
-          token={token}
-          onClose={() => setShowPassword(false)}
-          onToast={addToast}
-        />
-      )}
     </>
   );
 };

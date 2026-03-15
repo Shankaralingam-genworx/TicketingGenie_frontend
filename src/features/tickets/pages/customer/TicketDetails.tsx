@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useTicketDetail } from '../../../../hooks/useTickets';
+import { useTicketDetail } from '@/features/tickets/hooks/useTickets';
 import { STATUS_LABEL, PRIORITY_LABEL, TicketStatus, AttachmentMeta } from '../../types/ticket.types';
 import CommentThread from '../../../../components/common/CommentThread';
 import SlaCountdown from '../../components/SlaCountdown';

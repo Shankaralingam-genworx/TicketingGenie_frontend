@@ -1,54 +1,27 @@
-/**
- * components/layout/DashboardLayout.tsx
- *
- * Shared shell for ALL role dashboards (Admin, Agent, TeamLead, Customer).
- * Renders the topbar + sidebar + main content slot.
- *
- * Usage:
- *   <DashboardLayout
- *     title="Admin Control Panel"
- *     role="admin"
- *     nav={NAV_ITEMS}
- *     activeId={active}
- *     onNavChange={setActive}
- *     user={user}
- *     token={token}
- *     onLogout={handleLogout}
- *     onProfileClick={() => setShowProfile(true)}
- *     sidebarExtra={<div>...</div>}  // optional
- *   >
- *     <MyPageContent />
- *   </DashboardLayout>
- */
-
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LogoIcon, LogoutIcon } from '@/components/icons';
 import type { UserRole } from '@/types';
 
 export interface NavItem {
-  id: string;
+  id:    string;
   label: string;
-  icon: React.ReactNode;
+  icon:  React.ReactNode;
 }
 
 interface Props {
-  /** Short title shown in topbar next to the logo divider */
-  title: string;
-  /** Role label shown as a badge */
-  role: UserRole;
-  nav: NavItem[];
-  activeId: string;
-  onNavChange: (id: string) => void;
-  user: { email: string; name?: string } | null;
-  token?: string | null;
-  onLogout: () => void;
+  title:          string;
+  role:           UserRole;
+  nav:            NavItem[];
+  activeId:       string;
+  onNavChange:    (id: string) => void;
+  user:           { email: string; name?: string } | null;
+  token?:         string | null;
+  onLogout:       () => void;
   onProfileClick?: () => void;
-  /** Anything rendered at the bottom of the sidebar */
-  sidebarExtra?: React.ReactNode;
-  /** Anything rendered to the right of the role badge in the topbar */
-  topbarRight?: React.ReactNode;
-  children: React.ReactNode;
+  sidebarExtra?:  React.ReactNode;
+  topbarRight?:   React.ReactNode;
+  children:       React.ReactNode;
 }
 
 const ROLE_BADGE_CLASS: Record<UserRole, string> = {
@@ -66,24 +39,16 @@ const ROLE_LABEL: Record<UserRole, string> = {
 };
 
 const DashboardLayout: React.FC<Props> = ({
-  title,
-  role,
-  nav,
-  activeId,
-  onNavChange,
-  user,
-  onLogout,
-  onProfileClick,
-  sidebarExtra,
-  topbarRight,
-  children,
+  title, role, nav, activeId, onNavChange,
+  user, onLogout, onProfileClick,
+  sidebarExtra, topbarRight, children,
 }) => {
   const navigate = useNavigate();
   const initials = user?.email ? user.email.slice(0, 2).toUpperCase() : '??';
 
   return (
     <div className="dash">
-      {/* ── Topbar ─────────────────────────────────────────────── */}
+      {/* Topbar */}
       <header className="dash-topbar">
         <a className="dash-topbar-logo" href="/" onClick={(e) => { e.preventDefault(); navigate('/'); }}>
           <LogoIcon />
@@ -94,34 +59,26 @@ const DashboardLayout: React.FC<Props> = ({
 
         <div className="dash-topbar-right">
           {topbarRight}
-
           <span className={`dash-role-badge ${ROLE_BADGE_CLASS[role]}`}>
             {ROLE_LABEL[role]}
           </span>
-
           <span style={{ fontSize: '0.8rem', color: 'var(--slate-400)' }}>
             {user?.email}
           </span>
-
           {onProfileClick ? (
-            <button
-              className="dash-avatar dash-avatar--btn"
-              title="View profile"
-              onClick={onProfileClick}
-            >
+            <button className="dash-avatar dash-avatar--btn" title="View profile" onClick={onProfileClick}>
               {initials}
             </button>
           ) : (
             <span className="dash-avatar">{initials}</span>
           )}
-
           <button className="dash-logout-btn" onClick={onLogout}>
             <LogoutIcon /> Sign out
           </button>
         </div>
       </header>
 
-      {/* ── Sidebar ────────────────────────────────────────────── */}
+      {/* Sidebar */}
       <aside className="dash-sidebar">
         <span className="dash-nav-label">Menu</span>
         {nav.map((item) => (
@@ -134,11 +91,10 @@ const DashboardLayout: React.FC<Props> = ({
             {item.label}
           </button>
         ))}
-
         {sidebarExtra}
       </aside>
 
-      {/* ── Main ───────────────────────────────────────────────── */}
+      {/* Main */}
       <main className="dash-main">
         {children}
       </main>

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Issue, IssueResolver } from '../types';
 import { ApiClient } from '../hooks/useApi';
 import {
@@ -6,12 +6,12 @@ import {
   ActivePill,
   ConfirmDlg,
   Field,
-  Input,
   Select,
 } from '../components/Shared';
-import { IssueIcon, MapIcon, PlusIcon, RefreshIcon, TrashIcon } from '../components/Icons';
+import { MapIcon, PlusIcon, RefreshIcon, TrashIcon } from '../components/Icons';
 
-// ── Team dropdown type ────────────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────────────────────
+
 interface TeamOption {
   id: number;
   name: string;
@@ -20,12 +20,14 @@ interface TeamOption {
 
 interface Props {
   resolvers: IssueResolver[];
-  issues: Issue[];
-  loading: boolean;
+  issues:    Issue[];
+  loading:   boolean;
   onRefresh: () => void;
-  api: ApiClient;
-  onToast: (msg: string, ok?: boolean) => void;
+  api:       ApiClient;
+  onToast:   (msg: string, ok?: boolean) => void;
 }
+
+// ── Component ─────────────────────────────────────────────────────────────────
 
 const ResolversSection: React.FC<Props> = ({
   resolvers,
@@ -35,26 +37,26 @@ const ResolversSection: React.FC<Props> = ({
   api,
   onToast,
 }) => {
-  const [showForm,   setShowForm]   = useState(false);
-  const [issueId,    setIssueId]    = useState('');
-  const [teamId,     setTeamId]     = useState('');
-  const [saving,     setSaving]     = useState(false);
-  const [confirm,    setConfirm]    = useState<IssueResolver | null>(null);
-  const [filterIss,  setFilterIss]  = useState<number | 'all'>('all');
+  const [showForm,  setShowForm]  = useState(false);
+  const [issueId,   setIssueId]   = useState('');
+  const [teamId,    setTeamId]    = useState('');
+  const [saving,    setSaving]    = useState(false);
+  const [confirm,   setConfirm]   = useState<IssueResolver | null>(null);
+  const [filterTeam, setFilterTeam] = useState<number | 'all'>('all');
 
-  // ── Teams dropdown state ──────────────────────────────────────────────────
   const [teams,        setTeams]        = useState<TeamOption[]>([]);
   const [teamsLoading, setTeamsLoading] = useState(false);
 
   const issueMap = Object.fromEntries(issues.map((i) => [i.id, i]));
   const teamMap  = Object.fromEntries(teams.map((t) => [t.id, t]));
 
-  // ── Fetch teams on mount ──────────────────────────────────────────────────
+  // ── Fetch teams ───────────────────────────────────────────────────────────
+
   useEffect(() => {
     const fetchTeams = async () => {
       setTeamsLoading(true);
       try {
-       const data = await api.get<TeamOption[]>('/admin/teams_dropdown', 'auth');
+        const data = await api.get<TeamOption[]>('/admin/teams_dropdown', 'auth');
         setTeams(data);
       } catch (e: any) {
         onToast(`Failed to load teams: ${e.message}`, false);
@@ -64,6 +66,8 @@ const ResolversSection: React.FC<Props> = ({
     };
     fetchTeams();
   }, [api, onToast]);
+
+  // ── Handlers ──────────────────────────────────────────────────────────────
 
   const handleCreate = async () => {
     if (!issueId || !teamId) return;
@@ -98,18 +102,23 @@ const ResolversSection: React.FC<Props> = ({
     setConfirm(null);
   };
 
+  // ── Group by team ─────────────────────────────────────────────────────────
+
   const filtered = resolvers.filter(
-    (r) => filterIss === 'all' || r.issue_id === filterIss,
+    (r) => filterTeam === 'all' || r.team_id === filterTeam,
   );
 
-  // Group by issue for card-per-issue layout
-  const byIssue: Record<number, IssueResolver[]> = {};
+  const byTeam: Record<number, IssueResolver[]> = {};
   filtered.forEach((r) => {
-    (byIssue[r.issue_id] ??= []).push(r);
+    (byTeam[r.team_id] ??= []).push(r);
   });
+
+  // Unique teams that actually have resolvers (for filter dropdown)
+  const usedTeamIds = [...new Set(resolvers.map((r) => r.team_id))];
 
   return (
     <>
+      {/* ── Header ──────────────────────────────────────────────────────── */}
       <div className="adm-section-hdr">
         <div>
           <h1 className="dash-page-title">Skill Mapping</h1>
@@ -123,7 +132,7 @@ const ResolversSection: React.FC<Props> = ({
             onClick={onRefresh}
             disabled={loading}
           >
-            <RefreshIcon style={{ width: "24px", height: "24px" }} /> Refresh
+            <RefreshIcon style={{ width: '24px', height: '24px' }} /> Refresh
           </button>
           <button
             className="btn btn--primary"
@@ -134,29 +143,23 @@ const ResolversSection: React.FC<Props> = ({
         </div>
       </div>
 
-      {/* ── Inline create form ──────────────────────────────────────────────── */}
+      {/* ── Inline create form ───────────────────────────────────────────── */}
       {showForm && (
         <div className="adm-inline-form">
           <h4 className="adm-inline-form-title">New Issue → Team resolver</h4>
           <div className="adm-inline-form-row">
 
             <Field label="Issue type" required>
-              <Select
-                value={issueId}
-                onChange={(e) => setIssueId(e.target.value)}
-              >
+              <Select value={issueId} onChange={(e) => setIssueId(e.target.value)}>
                 <option value="">Select an issue…</option>
                 {issues
                   .filter((i) => i.is_active)
                   .map((i) => (
-                    <option key={i.id} value={i.id}>
-                      {i.name}
-                    </option>
+                    <option key={i.id} value={i.id}>{i.name}</option>
                   ))}
               </Select>
             </Field>
 
-            {/* ── Team dropdown from backend ─────────────────────────────── */}
             <Field label="Team" required>
               {teamsLoading ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, height: 38 }}>
@@ -166,15 +169,10 @@ const ResolversSection: React.FC<Props> = ({
                   </span>
                 </div>
               ) : (
-                <Select
-                  value={teamId}
-                  onChange={(e) => setTeamId(e.target.value)}
-                >
+                <Select value={teamId} onChange={(e) => setTeamId(e.target.value)}>
                   <option value="">Select a team…</option>
                   {teams.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
-                    </option>
+                    <option key={t.id} value={t.id}>{t.name}</option>
                   ))}
                 </Select>
               )}
@@ -183,11 +181,7 @@ const ResolversSection: React.FC<Props> = ({
             <div className="adm-inline-form-btns">
               <button
                 className="btn btn--outline"
-                onClick={() => {
-                  setShowForm(false);
-                  setIssueId('');
-                  setTeamId('');
-                }}
+                onClick={() => { setShowForm(false); setIssueId(''); setTeamId(''); }}
               >
                 Cancel
               </button>
@@ -196,11 +190,7 @@ const ResolversSection: React.FC<Props> = ({
                 disabled={!issueId || !teamId || saving}
                 onClick={handleCreate}
               >
-                {saving ? (
-                  <><Spinner size={14} color="white" /> Saving…</>
-                ) : (
-                  'Add resolver'
-                )}
+                {saving ? <><Spinner size={14} color="white" /> Saving…</> : 'Add resolver'}
               </button>
             </div>
 
@@ -208,36 +198,38 @@ const ResolversSection: React.FC<Props> = ({
         </div>
       )}
 
-      {/* ── Filter by issue ─────────────────────────────────────────────────── */}
+      {/* ── Filter by team ───────────────────────────────────────────────── */}
       <div className="adm-filter-row">
         <label className="adm-label" style={{ marginBottom: 0 }}>
-          Filter by issue:
+          Filter by team:
         </label>
         <Select
-          value={filterIss === 'all' ? 'all' : String(filterIss)}
+          value={filterTeam === 'all' ? 'all' : String(filterTeam)}
           style={{ width: 'auto', minWidth: 240 }}
           onChange={(e) =>
-            setFilterIss(
-              e.target.value === 'all' ? 'all' : Number(e.target.value),
-            )
+            setFilterTeam(e.target.value === 'all' ? 'all' : Number(e.target.value))
           }
         >
-          <option value="all">All issues ({resolvers.length} mappings)</option>
-          {issues.map((i) => (
-            <option key={i.id} value={i.id}>
-              {i.name}
-            </option>
-          ))}
+          <option value="all">All teams ({resolvers.length} mappings)</option>
+          {usedTeamIds.map((tid) => {
+            const name = teamMap[tid]?.name ?? `Team #${tid}`;
+            const count = resolvers.filter((r) => r.team_id === tid).length;
+            return (
+              <option key={tid} value={tid}>
+                {name} ({count})
+              </option>
+            );
+          })}
         </Select>
       </div>
 
-      {/* ── Content ─────────────────────────────────────────────────────────── */}
+      {/* ── Content ─────────────────────────────────────────────────────── */}
       {loading ? (
         <div className="adm-loading">
           <Spinner size={22} />
           <span>Loading…</span>
         </div>
-      ) : Object.keys(byIssue).length === 0 ? (
+      ) : Object.keys(byTeam).length === 0 ? (
         <div
           className="adm-empty"
           style={{ background: 'white', border: '1px solid var(--slate-200)', borderRadius: 12 }}
@@ -248,82 +240,121 @@ const ResolversSection: React.FC<Props> = ({
         </div>
       ) : (
         <div className="adm-resolver-cards">
-          {Object.entries(byIssue).map(([issId, recs]) => {
-            const issue = issueMap[Number(issId)];
+          {Object.entries(byTeam).map(([tId, recs]) => {
+            const team      = teamMap[Number(tId)];
+            const teamName  = team?.name ?? recs[0]?.team_name ?? `Team #${tId}`;
+            const initials  = teamName.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase();
+
             return (
-              <div key={issId} className="dash-table-wrap">
+              <div key={tId} className="dash-table-wrap">
+
+                {/* Card header — team identity */}
                 <div className="dash-table-hdr">
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div className="adm-issue-icon-wrap"><IssueIcon /></div>
+                    {/* Team avatar */}
+                    <div style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 10,
+                      background: 'linear-gradient(135deg, #6366F1, #4F46E5)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '0.8rem',
+                      fontWeight: 800,
+                      color: 'white',
+                      flexShrink: 0,
+                    }}>
+                      {initials}
+                    </div>
                     <div>
-                      <h3>{issue?.name ?? `Issue #${issId}`}</h3>
-                      <p>
-                        {issue?.category?.replace(/_/g, ' ')}
-                        {' · '}
-                        {recs.length} team{recs.length !== 1 ? 's' : ''} assigned
+                      <h3 style={{ margin: 0 }}>{teamName}</h3>
+                      <p style={{ margin: 0 }}>
+                        {recs.length} issue{recs.length !== 1 ? 's' : ''} assigned
                       </p>
                     </div>
                   </div>
-                  {issue && <ActivePill on={issue.is_active} />}
+                  {/* Active pill for the team itself if available */}
+                  {team && (
+                    <span style={{
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      padding: '3px 10px',
+                      borderRadius: 99,
+                      background: '#F0FDF4',
+                      color: '#15803D',
+                      border: '1px solid #BBF7D0',
+                    }}>
+                      Active
+                    </span>
+                  )}
                 </div>
+
+                {/* Issue rows */}
                 <table>
                   <thead>
                     <tr>
-                      <th>ID</th>
-                      <th>Team</th>
+                      <th>Issue</th>
+                      <th>Category</th>
                       <th>Status</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {recs.map((r) => (
-                      <tr key={r.id}>
-                        <td>
-                          <span className="adm-id">#{r.id}</span>
-                        </td>
-                        <td>
-                          <div className="adm-agent-cell">
-                            <div className="adm-agent-avatar">
-                              {String(r.team_id).padStart(2, '0').slice(-2)}
-                            </div>
-                            <div>
-                              <div style={{ fontWeight: 600 }}>
-                                {/* Prefer live team name from dropdown, fall back to stored name */}
-                                {teamMap[r.team_id]?.name ?? r.team_name ?? `Team #${r.team_id}`}
+                    {recs.map((r) => {
+                      const issue = issueMap[r.issue_id];
+                      return (
+                        <tr key={r.id}>
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <div style={{
+                                width: 28,
+                                height: 28,
+                                borderRadius: 7,
+                                background: 'var(--blue-50)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flexShrink: 0,
+                              }}>
+                                <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--blue-600)' }}>
+                                  #{r.issue_id}
+                                </span>
                               </div>
-                              <div style={{ fontSize: '0.75rem', color: 'var(--slate-400)' }}>
-                                ID: {r.team_id}
-                              </div>
+                              <span style={{ fontWeight: 600, color: 'var(--slate-800)' }}>
+                                {issue?.name ?? `Issue #${r.issue_id}`}
+                              </span>
                             </div>
-                          </div>
-                        </td>
-                        <td><ActivePill on={r.is_active} /></td>
-                        <td>
-                          <button
-                            className="btn btn--outline btn--sm adm-btn-del"
-                            onClick={() => setConfirm(r)}
-                          >
-                            <TrashIcon /> Remove
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                          <td style={{ color: 'var(--slate-500)', fontSize: '0.82rem' }}>
+                            {issue?.category?.replace(/_/g, ' ') ?? '—'}
+                          </td>
+                          <td><ActivePill on={r.is_active} /></td>
+                          <td>
+                            <button
+                              className="btn btn--outline btn--sm adm-btn-del"
+                              onClick={() => setConfirm(r)}
+                            >
+                              <TrashIcon /> Remove
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
+
               </div>
             );
           })}
         </div>
       )}
 
+      {/* ── Confirm delete dialog ────────────────────────────────────────── */}
       {confirm && (
         <ConfirmDlg
-          msg={`Remove the resolver mapping between "${
-            issueMap[confirm.issue_id]?.name ?? `issue #${confirm.issue_id}`
-          }" and ${
-            teamMap[confirm.team_id]?.name ?? confirm.team_name
-              ? `"${teamMap[confirm.team_id]?.name ?? confirm.team_name}"`
-              : `team #${confirm.team_id}`
+          msg={`Remove "${issueMap[confirm.issue_id]?.name ?? `Issue #${confirm.issue_id}`}" from ${
+            teamMap[confirm.team_id]?.name ?? confirm.team_name ?? `Team #${confirm.team_id}`
           }?`}
           onOk={() => handleDelete(confirm)}
           onCancel={() => setConfirm(null)}
@@ -333,4 +364,4 @@ const ResolversSection: React.FC<Props> = ({
   );
 };
 
-export default ResolversSection;
+export default ResolversSection;  

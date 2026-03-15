@@ -17,11 +17,11 @@ import {
   fetchTeamQueue, fetchEscalatedTickets, fetchMyAgents,
   assignTicket, reassignEscalatedTicket,
   AgentUser, PaginatedTickets, TicketFilters,
-} from '../../../../features/users/services/userApi';
+} from '@/features/users/services/userService';
 import { TicketResponse } from '../../types/ticket.types';
 import { PriorityBadge, EscalatedBadge, SlaBreachBadge } from '../../components/TicketBadges';
 import FilterBar    from './FilterBar';
-import SlaCountdown from '../../../tickets/components/SlaCountdown';
+import SlaCountdown from '@/features/tickets/components/SlaCountdown';
 import Pagination   from './Pagination';
 import { RefreshIcon } from '@/components/icons';
 

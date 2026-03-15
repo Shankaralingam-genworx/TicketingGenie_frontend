@@ -11,11 +11,11 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   fetchAgentWorkload, type AgentWorkload as AgentWorkloadData, TicketFilters,
-} from '../../../../features/users/services/userApi';
+} from '@/features/users/services/userService';
 import { TicketStatus } from '../../types/ticket.types';
 import { StatusBadge, PriorityBadge } from '../../components/TicketBadges';
 import FilterBar    from './FilterBar';
-import SlaCountdown from '../../../tickets/components/SlaCountdown';
+import SlaCountdown from '@/features/tickets/components/SlaCountdown';
 import { RefreshIcon } from '@/components/icons';
 
 // Status colours for the breakdown chips

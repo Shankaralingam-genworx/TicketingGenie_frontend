@@ -15,14 +15,14 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  fetchAgentAllTickets,
+  fetchAssignedTickets,
   PaginatedTickets,
   TicketFilters,
-} from '../../../../features/users/services/userApi';
-import { TicketStatus } from '../../types/ticket.types';
+} from '@/features/users/services/userService';
+import { TicketResponse, TicketStatus } from '../../types/ticket.types';
 import { StatusBadge, PriorityBadge } from '../../components/TicketBadges';
-import FilterBar  from '../teamLead/FilterBar';
-import Pagination from '../teamLead/Pagination';
+import FilterBar  from '@/features/tickets/pages/teamLead/FilterBar';
+import Pagination from '@/features/tickets/pages/teamLead/Pagination';
 import { RefreshIcon } from '@/components/icons';
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
@@ -164,17 +164,25 @@ export default function AssignedTickets() {
     sort_by: 'remaining_time', sort_dir: 'asc', per_page: 25,
   });
 
-  const load = useCallback(async (f: TicketFilters) => {
-    try {
-      setLoading(true); setError(null);
-      setData(await fetchAgentAllTickets(f));
-    } catch (e: any) { setError(e.message); }
-    finally { setLoading(false); }
-  }, []);
+const load = useCallback(async (f: TicketFilters) => {
+  try {
+    setLoading(true);
+    setError(null);
+    const res = await fetchAssignedTickets(f);
+    setTickets(res);
+
+  } catch (e: any) {
+    setError(e.message);
+  } finally {
+    setLoading(false);
+  }
+}, []);
+
 
   useEffect(() => { load(filters); }, []); // eslint-disable-line
 
-  const tickets  = data?.items ?? [];
+  const [tickets, setTickets] = useState<TicketResponse[]>([]);
+
   const active   = tickets.filter(t => ACTIVE.has(t.status)).length;
   const resolved = tickets.filter(t =>
     [TicketStatus.RESOLVED, TicketStatus.CLOSED].includes(t.status as TicketStatus)).length;

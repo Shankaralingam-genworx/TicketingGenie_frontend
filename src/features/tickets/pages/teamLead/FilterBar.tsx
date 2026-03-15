@@ -7,7 +7,7 @@
  * All other controls (dropdowns, sort) still fire onApply immediately.
  */
 import React, { useEffect, useState } from 'react';
-import { TicketFilters } from '../../../../features/users/services/userApi';
+import { TicketFilters } from '@/features/users/services/userService';
 
 const STATUS_OPTS = [
   { v: 'new',          l: 'New'          },

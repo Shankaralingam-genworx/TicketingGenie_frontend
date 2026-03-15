@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useMyTickets } from '../../../../hooks/useTickets';
+import { useMyTickets } from '@/features/tickets/hooks/useTickets';
 import { TicketStatus, STATUS_LABEL, PRIORITY_LABEL } from '../../types/ticket.types';
 import { TicketResponse } from '../../types/ticket.types';
 import SlaCountdown from '../../components/SlaCountdown';

@@ -7,11 +7,7 @@ import { useAppDispatch } from './hooks/useAppDispatch';
 
 const AppInitializer: React.FC = () => {
   const dispatch = useAppDispatch();
-
-  useEffect(() => {
-    dispatch(bootstrapAuth());
-  }, [dispatch]);
-
+  useEffect(() => { dispatch(bootstrapAuth()); }, [dispatch]);
   return <AppRoutes />;
 };
 
