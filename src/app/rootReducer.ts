@@ -1,6 +1,6 @@
 import { combineReducers } from '@reduxjs/toolkit';
-import { authReducer }    from '../features/auth';
-import { ticketsReducer } from '../features/tickets';
+import { authReducer }    from '@/features/auth';
+import { ticketsReducer } from '@/features/tickets';
 
 const rootReducer = combineReducers({
   auth:    authReducer,

@@ -10,7 +10,6 @@ export enum TicketStatus {
   REOPENED     = 'reopened',
 }
 
-
 export enum Priority {
   P1 = 'p1',
   P2 = 'p2',
@@ -25,7 +24,7 @@ export enum TicketSource {
 
 export enum CustomerTier {
   ENTERPRISE = 'enterprise',
-  SMB = 'smb',
+  SMB        = 'smb',
 }
 
 export enum Severity {
@@ -36,15 +35,15 @@ export enum Severity {
 }
 
 export const STATUS_LABEL: Record<TicketStatus, string> = {
-  [TicketStatus.NEW]: 'New',
+  [TicketStatus.NEW]:          'New',
   [TicketStatus.ACKNOWLEDGED]: 'Acknowledged',
-  [TicketStatus.ASSIGNED]: 'Assigned',
-  [TicketStatus.OPEN]: 'Open',
-  [TicketStatus.IN_PROGRESS]: 'In Progress',
-  [TicketStatus.ON_HOLD]: 'On Hold',
-  [TicketStatus.RESOLVED]: 'Resolved',
-  [TicketStatus.CLOSED]: 'Closed',
-  [TicketStatus.REOPENED]: 'Reopened',
+  [TicketStatus.ASSIGNED]:     'Assigned',
+  [TicketStatus.OPEN]:         'Open',
+  [TicketStatus.IN_PROGRESS]:  'In Progress',
+  [TicketStatus.ON_HOLD]:      'On Hold',
+  [TicketStatus.RESOLVED]:     'Resolved',
+  [TicketStatus.CLOSED]:       'Closed',
+  [TicketStatus.REOPENED]:     'Reopened',
 };
 
 export const PRIORITY_LABEL: Record<Priority, string> = {
@@ -55,17 +54,16 @@ export const PRIORITY_LABEL: Record<Priority, string> = {
 };
 
 export interface IssueResponse {
-  id: number;
-  name: string;
+  id:        number;
+  name:      string;
   category?: string;
 }
 
-
 export interface CreateTicketPayload {
-  issue_id: number;
-  title: string;
-  description: string;
-  priority: string;
+  issue_id:     number;
+  title:        string;
+  description:  string;
+  priority:     string;
   attachments?: File[];
 }
 
@@ -97,12 +95,12 @@ export interface EscalationResponse {
 }
 
 export interface AttachmentMeta {
-  id: number;
-  url: string;
-  stored_name: string;
+  id:            number;
+  url:           string;
+  stored_name:   string;
   original_name: string;
-  content_type: string;
-  size_bytes: number;
+  content_type:  string;
+  size_bytes:    number;
 }
 
 export interface TicketResponse {
@@ -131,32 +129,27 @@ export interface TicketResponse {
   sla_id: number | null;
   sla:    SLAResponse | null;
 
-  // Normal SLA deadlines
   response_due_at:   string | null;
   resolution_due_at: string | null;
 
-  // Escalation SLA deadlines
   escalated_response_due_at:   string | null;
   escalated_resolution_due_at: string | null;
 
-  // Timestamps
   work_started_at:   string | null;
   first_response_at: string | null;
   resolved_at:       string | null;
   closed_at:         string | null;
 
-  // Escalation
   is_escalated: boolean;
   escalated_at: string | null;
   escalation:   EscalationResponse | null;
 
   attachments: AttachmentMeta[] | null;
 
-  // Computed SLA breach flags from backend
-  response_sla_breached:              boolean;
-  resolution_sla_breached:            boolean;
-  escalated_response_sla_breached:    boolean;
-  escalated_resolution_sla_breached:  boolean;
+  response_sla_breached:             boolean;
+  resolution_sla_breached:           boolean;
+  escalated_response_sla_breached:   boolean;
+  escalated_resolution_sla_breached: boolean;
 
   created_at: string;
   updated_at: string;

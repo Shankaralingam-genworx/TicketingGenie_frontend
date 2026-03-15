@@ -1,37 +1,73 @@
 /**
  * lib/fetchClient.ts
- * Centralized HTTP client for all API calls.
- * Reads the token from Redux store on every request so it's always fresh.
- * Usage:
- *   import { authApi, ticketApi } from '@/lib/fetchClient';
- *   const data = await authApi.get('/auth/me');
- *   const result = await ticketApi.post('/tickets', body);
+ * Single centralized HTTP client for the entire app.
+ * Two exported instances: authApi and ticketApi.
+ * Token refresh is handled transparently on 401.
  */
 
 import env from '@/config/env';
-import { STORAGE_KEYS } from '@/config/constants';
+import { sessionEvents } from '@/lib/sessionEvents';
 
 type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 interface RequestOptions {
   body?: unknown;
   headers?: Record<string, string>;
-  /** Pass explicitly to override the token from localStorage */
+  /** Pass null explicitly to skip auth header */
   token?: string | null;
-  /** Use multipart/form-data (skip JSON stringify) */
   formData?: FormData;
+}
+
+// Singleton refresh promise — prevents parallel refresh races
+let _refreshPromise: Promise<string> | null = null;
+
+async function doRefresh(authBaseUrl: string): Promise<string> {
+  if (_refreshPromise) return _refreshPromise;
+
+  _refreshPromise = (async () => {
+    const res = await fetch(`${authBaseUrl}/auth/refresh`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+
+    if (!res.ok) {
+      // Clear token from Redux store — import lazily to avoid circular deps
+      const { default: store } = await import('@/app/store');
+      const { logout } = await import('@/features/auth/slices/authSlice');
+      store.dispatch(logout());
+      sessionEvents.emit('expired');
+      throw new Error('Session expired. Please log in again.');
+    }
+
+    const data = await res.json();
+    const { default: store } = await import('@/app/store');
+    const { setAuth } = await import('@/features/auth/slices/authSlice');
+    store.dispatch(setAuth({ access_token: data.access_token, user: data.user }));
+    return data.access_token as string;
+  })().finally(() => {
+    _refreshPromise = null;
+  });
+
+  return _refreshPromise;
 }
 
 class FetchClient {
   private baseUrl: string;
+  private authBaseUrl: string;
 
-  constructor(baseUrl: string) {
+  constructor(baseUrl: string, authBaseUrl: string) {
     this.baseUrl = baseUrl;
+    this.authBaseUrl = authBaseUrl;
   }
 
   private getToken(): string | null {
     try {
-      return localStorage.getItem(STORAGE_KEYS.TOKEN);
+      // Read from Redux store (single source of truth for the access token)
+      const storeModule = (window as any).__tg_store__;
+      if (storeModule) {
+        return storeModule.getState().auth?.token ?? null;
+      }
+      return null;
     } catch {
       return null;
     }
@@ -44,18 +80,12 @@ class FetchClient {
   ): Promise<T> {
     const token = options.token !== undefined ? options.token : this.getToken();
 
-    const headers: Record<string, string> = {
-      ...options.headers,
-    };
-
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
+    const headers: Record<string, string> = { ...options.headers };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
 
     let body: BodyInit | undefined;
     if (options.formData) {
       body = options.formData;
-      // Don't set Content-Type — browser sets it with boundary automatically
     } else if (options.body !== undefined) {
       headers['Content-Type'] = 'application/json';
       body = JSON.stringify(options.body);
@@ -68,20 +98,45 @@ class FetchClient {
       credentials: 'include',
     });
 
+    // Transparent token refresh on 401
+    if (res.status === 401 && options.token === undefined) {
+      try {
+        const newToken = await doRefresh(this.authBaseUrl);
+        const retryHeaders = { ...headers, Authorization: `Bearer ${newToken}` };
+        const retryRes = await fetch(`${this.baseUrl}${path}`, {
+          method,
+          headers: retryHeaders,
+          body,
+          credentials: 'include',
+        });
+        return this.handleResponse<T>(retryRes);
+      } catch {
+        throw new Error('Session expired. Please log in again.');
+      }
+    }
+
+    return this.handleResponse<T>(res);
+  }
+
+  private async handleResponse<T>(res: Response): Promise<T> {
     if (!res.ok) {
       let detail = `HTTP ${res.status}`;
       try {
         const err = await res.json();
-        detail = err?.detail ?? err?.message ?? detail;
+        if (Array.isArray(err?.detail)) {
+          detail = err.detail
+            .map((d: any) => `${d.loc?.join('.') ?? ''} — ${d.msg}`)
+            .join('; ');
+        } else {
+          detail = err?.detail ?? err?.message ?? detail;
+        }
       } catch {
         // non-JSON error body
       }
       throw new Error(detail);
     }
 
-    // 204 No Content
     if (res.status === 204) return undefined as T;
-
     return res.json() as Promise<T>;
   }
 
@@ -106,10 +161,10 @@ class FetchClient {
   }
 }
 
-/** Auth-service client  (→ VITE_API_AUTH_URL) */
-export const authApi = new FetchClient(env.API_AUTH_URL);
+/** Auth-service client (→ VITE_API_AUTH_URL) */
+export const authApi = new FetchClient(env.API_AUTH_URL, env.API_AUTH_URL);
 
 /** Ticket-service client (→ VITE_API_TICKET_URL) */
-export const ticketApi = new FetchClient(env.API_TICKET_URL);
+export const ticketApi = new FetchClient(env.API_TICKET_URL, env.API_AUTH_URL);
 
 export default FetchClient;

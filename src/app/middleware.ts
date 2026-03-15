@@ -1,9 +1,3 @@
-/**
- * app/middleware.ts
- * Redux middleware. loggerMiddleware is dev-only.
- * authMiddleware was a no-op passthrough and has been removed.
- */
-
 import type { Middleware } from '@reduxjs/toolkit';
 import type { RootState } from './rootReducer';
 

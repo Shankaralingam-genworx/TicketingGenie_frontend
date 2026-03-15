@@ -9,5 +9,8 @@ const store = configureStore({
   devTools: import.meta.env.DEV,
 });
 
+// Expose store globally so fetchClient can read the token without circular imports
+(window as any).__tg_store__ = store;
+
 export type AppDispatch = typeof store.dispatch;
 export default store;

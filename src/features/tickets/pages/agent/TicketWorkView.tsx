@@ -34,10 +34,10 @@ import {
   fetchTicketById,
   updateTicketStatus,
   startWorkingOnTicket,
-} from '../../../../features/users/services/userApi';
+} from '@/features/users/services/userService';
 import { TicketResponse, TicketStatus } from '../../types/ticket.types';
 import { StatusBadge, PriorityBadge } from '../../components/TicketBadges';
-import CommentThread from '../../../../components/common/CommentThread';
+import CommentThread from '@/components/common/CommentThread';
 import { BackIcon } from '@/components/icons';
 
 // ── Frontend transition map ───────────────────────────────────────────────────

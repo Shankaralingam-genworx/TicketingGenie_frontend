@@ -7,8 +7,8 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
-import { useNotifications } from '../hooks/useNotifications';
-import type { NotificationItem, NotificationType } from '../services/notificationApi';
+import { useNotifications } from '@/features/notifications/hooks/useNotifications';
+import type { NotificationItem, NotificationType } from '@/features/notifications/services/notificationService';
 
 interface NotificationBellProps {
   token: string | null;

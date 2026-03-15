@@ -14,11 +14,11 @@ import { useNavigate } from 'react-router-dom';
 import {
   fetchTeamAllTickets, fetchMyAgents, assignTicket, reassignEscalatedTicket,
   AgentUser, PaginatedTickets, TicketFilters,
-} from '../../../../features/users/services/userApi';
+} from '@/features/users/services/userService';
 import { TicketResponse, TicketStatus } from '../../types/ticket.types';
 import { StatusBadge, PriorityBadge, EscalatedBadge } from '../../components/TicketBadges';
 import FilterBar    from './FilterBar';
-import SlaCountdown from '../../../tickets/components/SlaCountdown';
+import SlaCountdown from '@/features/tickets/components/SlaCountdown';
 import Pagination   from './Pagination';
 import { RefreshIcon } from '@/components/icons';
 

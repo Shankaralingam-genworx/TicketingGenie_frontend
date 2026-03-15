@@ -1,1 +1,1 @@
-export * from './types/sla.types';
+export type { SLAResponse } from '@/features/tickets/types/ticket.types';

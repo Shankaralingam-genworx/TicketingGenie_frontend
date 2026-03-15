@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAppDispatch, useAppSelector } from '../hooks/useAppDispatch';
-import { loginThunk, clearError } from '../features/auth';
+import { useAppDispatch, useAppSelector } from '@/hooks/useAppDispatch';
+import { loginThunk, clearError, setAuth } from '@/features/auth';
+import { authService } from '@/features/auth/services/authService';
 import './LoginPage.css';
-import env from '../config/env';  
+
 
 /* ─────────────────────────────────────────────────────────────────
    Register Modal
@@ -46,40 +47,24 @@ const [form, setForm] = useState({
     setError('');
 
     try {
-      const res = await fetch(`${env.API_AUTH_URL}/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+      const data = await authService.register({
+        name:               form.name,
+        email:              form.email,
+        password:           form.password,
+        phone:              form.phone || undefined,
+        customer_tier:      form.customer_tier,
+        preferred_contact:  form.preferred_contact,
       });
 
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data?.message || 'Registration failed. Please try again.');
-      }
-
-      //  Get the TokenResponse directly
-      const data: {
-        access_token: string;
-        token_type: string;
-        user: { id: string; email: string; role: string };
-      } = await res.json();
-
-      // Store token & user info in Redux (or localStorage)
-      dispatch({
-        type: 'auth/loginSuccess',
-        payload: { token: data.access_token, user: data.user },
-      });
+      // Store token & user in Redux
+      dispatch(setAuth({ access_token: data.access_token, user: data.user }));
 
       // Redirect based on role
-      switch (data.user.role) {
-        case 'ADMIN': navigate('/admin', { replace: true }); break;
-        case 'TEAM_LEAD': navigate('/lead', { replace: true }); break;
-        case 'SUPPORT_AGENT': navigate('/agent', { replace: true }); break;
-        case 'CUSTOMER': navigate('/customer', { replace: true }); break;
-        default: navigate('/', { replace: true }); break;
-      }
-
-      onClose(); // close the modal if still open
+      const roleHome: Record<string, string> = {
+        admin: '/admin', team_lead: '/lead', support_agent: '/agent', customer: '/customer',
+      };
+      navigate(roleHome[data.user.role] ?? '/', { replace: true });
+      onClose();
 
     } catch (err: any) {
       setError(err.message || 'Something went wrong.');
@@ -297,7 +282,7 @@ const ForgotPasswordModal: React.FC<{ onClose: () => void }> = ({ onClose }) => 
     return () => document.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  const emailErr = touched && email.length > 0 && !email.includes('@') ? 'Enter a valid email.' : '';
+  const emailErr  = touched && email.length > 0 && !email.includes('@') ? 'Enter a valid email.' : '';
   const canSubmit = email.includes('@');
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -307,18 +292,10 @@ const ForgotPasswordModal: React.FC<{ onClose: () => void }> = ({ onClose }) => 
     setIsLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/auth/forgot-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data?.message || 'Request failed. Please try again.');
-      }
+      await authService.forgotPassword(email);
       setSent(true);
     } catch (err: any) {
-      setError(err.message || 'Something went wrong.');
+      setError(err.message || 'Something went wrong. Please try again.');
     } finally {
       setIsLoading(false);
     }

@@ -1,8 +1,2 @@
-export * from "./services/teamApi"
-
-export type {
-  TeamMemberInfo,
-  TeamDetailResponse,
-  CreateTeamRequest,
-  UpdateTeamRequest
-} from "./types/team.types"
+export { teamService } from './services/teamService';
+export type { TeamDetailResponse, TeamMemberInfo, CreateTeamRequest, UpdateTeamRequest } from './services/teamService';

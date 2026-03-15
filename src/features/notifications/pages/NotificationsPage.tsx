@@ -5,9 +5,9 @@
 
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { useAppSelector } from "../../../hooks/useAppDispatch";
-import { useNotifications } from "../hooks/useNotifications";
-import type { NotificationType } from "../services/notificationApi";
+import { useAppSelector } from '@/hooks/useAppDispatch';
+import { useNotifications } from '@/features/notifications/hooks/useNotifications';
+import type { NotificationType } from '@/features/notifications/services/notificationService';
 import { BackIcon } from "@/components/icons";
 
 const TYPE_META: Record<NotificationType, { icon: string; label: string }> = {
